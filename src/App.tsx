@@ -1,0 +1,101 @@
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { DictationProvider } from './contexts/DictationContext';
+
+import Header from './components/Layout/Header';
+import Footer from './components/Layout/Footer';
+
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
+import PricingSelect from './pages/PricingSelect';
+import Dashboard from './pages/Dashboard';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
+import DictationToggle from './components/Dictation/DictationToggle';
+
+const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  return user ? <>{children}</> : <Navigate to="/login" />;
+};
+
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
+  return !user ? <>{children}</> : <Navigate to="/dashboard" />;
+};
+
+function App() {
+  return (
+    <Router>
+      <AuthProvider>
+        <DictationProvider>
+          <div className="min-h-screen flex flex-col">
+            <Header />
+
+            <main className="flex-1">
+              <Routes>
+                <Route path="/" element={<Home />} />
+
+                <Route
+                  path="/login"
+                  element={
+                    <PublicRoute>
+                      <Login />
+                    </PublicRoute>
+                  }
+                />
+
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+
+                <Route
+                  path="/signup"
+                  element={
+                    <PublicRoute>
+                      <Signup />
+                    </PublicRoute>
+                  }
+                />
+
+                <Route
+                  path="/pricing-select"
+                  element={
+                    <ProtectedRoute>
+                      <PricingSelect />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/dashboard/*"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/integrations"
+                  element={
+                    <ProtectedRoute>
+                      <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+              </Routes>
+            </main>
+
+            <Footer />
+
+            <DictationToggle />
+          </div>
+        </DictationProvider>
+      </AuthProvider>
+    </Router>
+  );
+}
+
+export default App;

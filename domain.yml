@@ -1,0 +1,195 @@
+version: "3.1"
+
+intents:
+  - greet
+  - goodbye
+  - ask_faq
+  - affirm
+  - deny
+  - search_products
+  - product_inquiry
+  - check_price
+  - check_availability
+  - add_to_cart
+  - view_cart
+  - remove_from_cart
+  - update_cart
+  - checkout
+  - order_status
+  - order_history
+  - cancel_order
+  - return_request
+  - shipping_inquiry
+  - payment_inquiry
+  - apply_discount
+  - compare_products
+  - product_reviews
+  - size_inquiry
+  - color_inquiry
+  - help
+  - bot_challenge
+  - thank_you
+  - out_of_scope
+
+actions:
+  - action_lookup_faq
+
+entities:
+  - product_name
+  - product_category
+  - order_number
+  - quantity
+  - size
+  - color
+  - coupon_code
+
+slots:
+  product_name:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: product_name
+  product_category:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: product_category
+  order_number:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: order_number
+  quantity:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: quantity
+  size:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: size
+  color:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: color
+  coupon_code:
+    type: text
+    mappings:
+    - type: from_entity
+      entity: coupon_code
+
+responses:
+  utter_greet:
+  - text: "Hello! Welcome to our store. I'm here to help you find the perfect products. How can I assist you today?"
+  - text: "Hi there! 👋 Welcome! I can help you browse products, check orders, or answer any questions. What would you like to do?"
+  - text: "Hello! Thanks for visiting. I'm your shopping assistant. What can I help you with today?"
+
+  utter_goodbye:
+  - text: "Thank you for shopping with us! Have a wonderful day! 👋"
+  - text: "Goodbye! We hope to see you again soon. Happy shopping!"
+  - text: "Thanks for visiting! If you need anything else, just come back. Take care!"
+
+  utter_help:
+  - text: "I'm here to help you with:\n• Finding and browsing products\n• Checking prices and availability\n• Managing your shopping cart\n• Tracking orders\n• Processing returns\n• Answering questions about shipping and payment\n\nWhat would you like help with?"
+  - text: "I can assist you with:\n• Product search and information\n• Cart management\n• Order tracking\n• Returns and refunds\n• Shipping and delivery\n• Payment methods\n\nHow can I help you today?"
+
+  utter_iamabot:
+  - text: "I'm an AI shopping assistant, here to help you find products and answer questions about our store. How can I assist you today?"
+
+  utter_search_products:
+  - text: "I'd be happy to help you find products! What category are you interested in? For example: electronics, clothing, books, home & garden, sports, or beauty products."
+  - text: "Let's find the perfect product for you! What type of product are you looking for?"
+
+  utter_product_inquiry:
+  - text: "I'd be happy to provide more information about that product. Let me search for the details for you."
+  - text: "Let me get you the product details right away."
+
+  utter_check_price:
+  - text: "Let me check the current price for that product. One moment please."
+  - text: "I'll look up the pricing information for you right away."
+
+  utter_check_availability:
+  - text: "Let me check the availability and stock status for you."
+  - text: "I'll verify if that product is currently in stock."
+
+  utter_add_to_cart:
+  - text: "Great choice! I've added that item to your cart. Would you like to continue shopping or proceed to checkout?"
+  - text: "Perfect! The item has been added to your cart. You can view your cart anytime or continue browsing."
+
+  utter_view_cart:
+  - text: "Here's what's currently in your cart. You can update quantities, remove items, or proceed to checkout."
+  - text: "Let me show you the items in your shopping cart."
+
+  utter_remove_from_cart:
+  - text: "I've removed that item from your cart. Is there anything else you'd like to change?"
+  - text: "Done! The item has been removed. Your cart has been updated."
+
+  utter_update_cart:
+  - text: "I've updated the quantity in your cart. Your changes have been saved."
+  - text: "Perfect! I've updated your cart with the new quantity."
+
+  utter_checkout:
+  - text: "Great! Let's proceed to checkout. You'll be able to review your order, select shipping options, and complete your payment."
+  - text: "Excellent! I'll take you to checkout where you can review your order and complete your purchase."
+
+  utter_order_status:
+  - text: "Let me check the status of your order. Please provide your order number, or I can look it up if you're logged in."
+  - text: "I'll track your order for you. One moment while I retrieve the latest information."
+
+  utter_order_history:
+  - text: "Let me retrieve your order history. I'll show you all your past purchases."
+  - text: "I'll pull up your complete order history for you."
+
+  utter_cancel_order:
+  - text: "I can help you cancel your order. Please provide your order number, and I'll process the cancellation for you."
+  - text: "I'll assist you with canceling your order. Let me get the details."
+
+  utter_return_request:
+  - text: "I can help you initiate a return. Please provide your order number and the item you'd like to return, and I'll start the process."
+  - text: "I'll help you process your return. Let me gather the necessary information."
+
+  utter_shipping_inquiry:
+  - text: "We offer several shipping options:\n• Standard Shipping (5-7 business days) - Free on orders over $50\n• Express Shipping (2-3 business days) - $9.99\n• Overnight Shipping (next business day) - $19.99\n\nWhich option would you like to know more about?"
+  - text: "Here are our shipping options:\n• Standard: 5-7 days (Free over $50)\n• Express: 2-3 days ($9.99)\n• Overnight: Next day ($19.99)\n\nWould you like more details?"
+
+  utter_payment_inquiry:
+  - text: "We accept various payment methods:\n• Credit/Debit Cards (Visa, Mastercard, Amex)\n• PayPal\n• Apple Pay\n• Google Pay\n• Store Credit\n\nWhich payment method would you like to use?"
+  - text: "You can pay using:\n• Credit/Debit Cards\n• PayPal\n• Apple Pay\n• Google Pay\n• Store Credit\n\nAll payments are secure and encrypted."
+
+  utter_apply_discount:
+  - text: "Let me apply that discount code to your order. One moment please."
+  - text: "I'll validate and apply your coupon code right away."
+
+  utter_compare_products:
+  - text: "I can help you compare products. Let me gather the details and show you the differences."
+  - text: "Great idea! Comparing products helps make the best choice. Let me get the comparison for you."
+
+  utter_product_reviews:
+  - text: "Let me show you the customer reviews and ratings for that product."
+  - text: "I'll pull up the reviews and ratings from other customers."
+
+  utter_size_inquiry:
+  - text: "Let me check the available sizes for that product. I'll also show you our size chart if needed."
+  - text: "I'll get you the size information and help you find the perfect fit."
+
+  utter_color_inquiry:
+  - text: "Let me show you all the available colors for that product."
+  - text: "I'll check what color options we have available."
+
+  utter_thank_you:
+  - text: "You're very welcome! Is there anything else I can help you with?"
+  - text: "Happy to help! Let me know if you need anything else."
+
+  utter_default:
+  - text: "I'm not sure I understand. Could you rephrase that? I can help you with shopping, orders, returns, and more!"
+  - text: "I didn't quite catch that. I can help you with:\n• Finding products\n• Managing your cart\n• Tracking orders\n• Returns and refunds\n\nWhat would you like to do?"
+
+  utter_out_of_scope:
+  - text: "I'm a shopping assistant, so I'm best at helping with products, orders, and shopping-related questions. Is there something I can help you shop for today?"
+  - text: "I specialize in helping with shopping and orders. How can I assist you with your shopping needs today?"
+
+session_config:
+  session_expiration_time: 60
+  carry_over_slots_to_new_session: true
