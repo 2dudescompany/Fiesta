@@ -59,79 +59,79 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
   }, [isOpen]);
 
   const sendMessage = async (text: string) => {
-  console.log("Chatbot key:", chatbotKey);
+    console.log("Chatbot key:", chatbotKey);
 
-  if (!text.trim()) return;
+    if (!text.trim()) return;
 
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    text: text.trim(),
-    sender: "user",
-    timestamp: new Date(),
-  };
-
-  setMessages((prev) => [...prev, userMessage]);
-  setInputValue("");
-  setIsLoading(true);
-  setIsTyping(true);
-
-  await new Promise((resolve) => setTimeout(resolve, 400));
-
-  try {
-    const faqResponse = await fetch(
-      `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({
-          question: text.trim(),
-          chatbot_key: chatbotKey,
-        }),
-      }
-    );
-
-    const faqData = await faqResponse.json();
-
-    if (faqData?.answer) {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: faqData.answer,
-        sender: "bot",
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-    } else {
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "Sorry, I don't have an answer for that yet.",
-        sender: "bot",
-        timestamp: new Date(),
-        quickReplies: ["Help", "Browse Products"],
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-    }
-  } catch (error) {
-    console.error("FAQ request failed:", error);
-
-    const errorMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      text: "Sorry, something went wrong. Please try again.",
-      sender: "bot",
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      text: text.trim(),
+      sender: "user",
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, errorMessage]);
-  } finally {
-    setIsLoading(false);
-    setIsTyping(false);
-  }
-};
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+    setIsLoading(true);
+    setIsTyping(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    try {
+      const faqResponse = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({
+            question: text.trim(),
+            chatbot_key: chatbotKey,
+          }),
+        }
+      );
+
+      const faqData = await faqResponse.json();
+
+      if (faqData?.answer) {
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: faqData.answer,
+          sender: "bot",
+          timestamp: new Date(),
+        };
+
+        setMessages((prev) => [...prev, botMessage]);
+      } else {
+        const botMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          text: "Sorry, I don't have an answer for that yet.",
+          sender: "bot",
+          timestamp: new Date(),
+          quickReplies: ["Help", "Browse Products"],
+        };
+
+        setMessages((prev) => [...prev, botMessage]);
+      }
+    } catch (error) {
+      console.error("FAQ request failed:", error);
+
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Sorry, something went wrong. Please try again.",
+        sender: "bot",
+        timestamp: new Date(),
+      };
+
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+      setIsTyping(false);
+    }
+  };
 
 
 
@@ -169,7 +169,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         <button
           onClick={() => setIsOpen(true)}
           className={`fixed ${positionClasses[position]} w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white transition-all hover:scale-110 hover:shadow-3xl z-50 animate-bounce`}
-          style={{ 
+          style={{
             backgroundColor: primaryColor,
             boxShadow: `0 10px 25px -5px ${primaryColor}40`,
           }}
@@ -193,9 +193,8 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
 
       {isOpen && (
         <div
-          className={`fixed ${positionClasses[position]} w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${
-            isMinimized ? 'h-16' : ''
-          }`}
+          className={`fixed ${positionClasses[position]} w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isMinimized ? 'h-16' : ''
+            }`}
           style={{
             boxShadow: '0 20px 60px -12px rgba(0, 0, 0, 0.25)',
           }}
@@ -203,7 +202,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
           {/* Header */}
           <div
             className="flex items-center justify-between p-4 rounded-t-2xl text-white"
-            style={{ 
+            style={{
               backgroundColor: primaryColor,
               background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
             }}
@@ -251,16 +250,15 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                   >
                     <div className="flex flex-col max-w-[85%]">
                       <div
-                        className={`rounded-2xl px-4 py-3 shadow-sm ${
-                          message.sender === 'user'
+                        className={`rounded-2xl px-4 py-3 shadow-sm ${message.sender === 'user'
                             ? 'bg-blue-600 text-white rounded-br-sm'
                             : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm'
-                        }`}
+                          }`}
                         style={
                           message.sender === 'user'
                             ? {
-                                background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
-                              }
+                              background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
+                            }
                             : {}
                         }
                       >
@@ -322,21 +320,21 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                       <div className="flex space-x-1.5">
                         <div
                           className="w-2 h-2 rounded-full animate-bounce"
-                          style={{ 
+                          style={{
                             backgroundColor: primaryColor,
                             animationDelay: '0ms',
                           }}
                         ></div>
                         <div
                           className="w-2 h-2 rounded-full animate-bounce"
-                          style={{ 
+                          style={{
                             backgroundColor: primaryColor,
                             animationDelay: '150ms',
                           }}
                         ></div>
                         <div
                           className="w-2 h-2 rounded-full animate-bounce"
-                          style={{ 
+                          style={{
                             backgroundColor: primaryColor,
                             animationDelay: '300ms',
                           }}
@@ -376,7 +374,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                     type="submit"
                     disabled={isLoading || !inputValue.trim()}
                     className="p-3 rounded-xl text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95 shadow-lg"
-                    style={{ 
+                    style={{
                       backgroundColor: primaryColor,
                       background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
                     }}

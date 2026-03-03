@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -47,9 +45,6 @@ export default function TtsAnalytics() {
 
   const [intentScore, setIntentScore] = useState<number>(0);
 
-  const [engagedWords, setEngagedWords] = useState<
-    { word: string; score: number }[]
-  >([]);
 
   useEffect(() => {
     loadAnalytics();
@@ -73,10 +68,15 @@ export default function TtsAnalytics() {
   }
 
   async function loadAnalytics() {
-    /* 1️⃣ FETCH EVENTS */
+    /* 1️⃣ GET CURRENT USER */
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    /* 2️⃣ FETCH EVENTS – scoped to this user */
     const { data: events } = await supabase
       .from('tts_events')
-      .select('trigger_type, word_count, created_at');
+      .select('trigger_type, word_count, created_at')
+      .eq('user_id', user.id);
 
     if (!events) return;
 
@@ -127,7 +127,8 @@ export default function TtsAnalytics() {
     /* 6️⃣ WORD-LEVEL ANALYTICS */
     const { data: words } = await supabase
       .from('tts_word_stats')
-      .select('word, trigger_type, count');
+      .select('word, trigger_type, count')
+      .eq('user_id', user.id);
 
     if (!words) return;
 
@@ -154,16 +155,6 @@ export default function TtsAnalytics() {
         .slice(0, 10)
     );
 
-    /* 8️⃣ MOST ENGAGED WORDS */
-    setEngagedWords(
-      Object.entries(wordMap)
-        .map(([word, v]) => ({
-          word,
-          score: v.hover + v.click * 2,
-        }))
-        .sort((a, b) => b.score - a.score)
-        .slice(0, 10)
-    );
   }
 
   if (!summary) return <p>Loading TTS analytics...</p>;
@@ -182,94 +173,94 @@ export default function TtsAnalytics() {
       {/* Hover vs Click */}
       <Card title="Hover vs Click Usage">
         <div className="flex justify-end mb-3">
-            <input type="date"
+          <input type="date"
             value={selectedDate}
             onChange={e => setSelectedDate(e.target.value)}
             className="border rounded px-2 py-1 text-sm"
-            />
+          />
         </div>
 
         {hoverClick.every(d => d.value === 0) ? (
-            <p className="text-gray-500 text-sm">No TTS activity on this date</p>
+          <p className="text-gray-500 text-sm">No TTS activity on this date</p>
         ) : (
-            <ResponsiveContainer width="100%" height={250}>
+          <ResponsiveContainer width="100%" height={250}>
             <PieChart>
-                <Pie data={hoverClick} dataKey="value" nameKey="name" label>
+              <Pie data={hoverClick} dataKey="value" nameKey="name" label>
                 {hoverClick.map((_, i) => (
-                    <Cell key={i} fill={COLORS[i]} />
+                  <Cell key={i} fill={COLORS[i]} />
                 ))}
-                </Pie>
-                <Tooltip />
+              </Pie>
+              <Tooltip />
             </PieChart>
-            </ResponsiveContainer>
+          </ResponsiveContainer>
         )}
       </Card>
 
 
       {/* Usage over time */}
-        <Card title="TTS Usage Heatmap (by Hour)">
+      <Card title="TTS Usage Heatmap (by Hour)">
         <div className="overflow-x-auto">
-            <table className="border-collapse text-xs">
+          <table className="border-collapse text-xs">
             <thead>
-                <tr>
+              <tr>
                 <th className="p-2 text-left">Date</th>
                 {Array.from({ length: 24 }).map((_, h) => (
-                    <th key={h} className="p-1 text-center">{h}</th>
+                  <th key={h} className="p-1 text-center">{h}</th>
                 ))}
-                </tr>
+              </tr>
             </thead>
             <tbody>
-                {usageOverTime.map((row: any) => (
+              {usageOverTime.map((row: any) => (
                 <tr key={row.date}>
-                    <td className="p-2 font-medium">{row.date}</td>
-                    {Array.from({ length: 24 }).map((_, h) => {
+                  <td className="p-2 font-medium">{row.date}</td>
+                  {Array.from({ length: 24 }).map((_, h) => {
                     const value = row.hours[h] || 0;
                     const intensity = Math.min(value * 20, 255);
                     return (
-                        <td
+                      <td
                         key={h}
                         title={`${value} interactions`}
                         className="w-6 h-6"
                         style={{
-                            backgroundColor: value
+                          backgroundColor: value
                             ? `rgba(37,99,235,${intensity / 255})`
                             : '#f1f5f9',
                         }}
-                        />
+                      />
                     );
-                    })}
+                  })}
                 </tr>
-                ))}
+              ))}
             </tbody>
-            </table>
+          </table>
         </div>
-        </Card>
+      </Card>
 
 
       {/* Top Words */}
-        <Card title="Top Spoken Words">
+      <Card title="Top Spoken Words">
         <ResponsiveContainer width="100%" height={340}>
-            <BarChart
+          <BarChart
             data={topWords}
             margin={{ top: 20, right: 20, left: 20, bottom: 90 }}
-            >
+          >
             <XAxis
-                dataKey="word"
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                tick={{ fontSize: 12 }}
+              dataKey="word"
+              interval={0}
+              angle={-45}
+              textAnchor="end"
+              tick={{ fontSize: 12 }}
             />
             <YAxis />
             <Tooltip />
             <Bar dataKey="count" fill="#16a34a" />
-            </BarChart>
+          </BarChart>
         </ResponsiveContainer>
-        </Card>
+      </Card>
 
 
-        {/* Engaged Words */}
-        {/* <Card title="Most Engaged Words">
+      {/* Engaged Words */}
+      {/* <Card title="Most Engaged Words">
         <ResponsiveContainer
             width="100%"
             height={Math.max(engagedWords.length * 40, 300)}
@@ -291,7 +282,7 @@ export default function TtsAnalytics() {
             </BarChart>
         </ResponsiveContainer>
         </Card> */}
-      <DownloadReportButton targetId="analyticsExport" fileName="analytics-report.pdf"/>
+      <DownloadReportButton targetId="analyticsExport" fileName="analytics-report.pdf" />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -15,7 +15,10 @@ export default function Business() {
     support_email: "",
     support_phone: "",
     website_url: "",
+    allowed_domains: "",   // stored as comma-separated string in UI, text[] in DB
   });
+
+  const [copied, setCopied] = useState(false);
 
   const [faqs, setFaqs] = useState<any[]>([]);
   const [faqForm, setFaqForm] = useState({
@@ -46,8 +49,9 @@ export default function Business() {
         support_email: data.support_email || "",
         support_phone: data.support_phone || "",
         website_url: data.website_url || "",
+        // allowed_domains: text[] in DB → comma-separated string in UI
+        allowed_domains: (data.allowed_domains || []).join(", "),
       });
-
       fetchFaqs(data.id);
     }
   };
@@ -75,24 +79,42 @@ export default function Business() {
     if (!user) return;
     setLoading(true);
 
+    // Convert comma-separated allowed_domains string → cleaned text[]
+    const domainArray = form.allowed_domains
+      .split(",")
+      .map((d: string) => d.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, ''))
+      .filter(Boolean);
+
+    const payload = {
+      business_name: form.business_name,
+      industry: form.industry,
+      description: form.description,
+      support_email: form.support_email,
+      support_phone: form.support_phone,
+      website_url: form.website_url,
+      allowed_domains: domainArray,
+    };
+
     if (business) {
       await supabase
         .from("businesses")
-        .update(form)
+        .update(payload)
         .eq("id", business.id);
     } else {
       const { data } = await supabase
         .from("businesses")
         .insert({
-        ...form,
-        user_id: user.id,
-        chatbot_key: crypto.randomUUID(),
+          ...payload,
+          user_id: user.id,
+          chatbot_key: crypto.randomUUID(),
         })
         .select()
         .single();
 
-      setBusiness(data);
-      fetchFaqs(data.id);
+      if (data) {
+        setBusiness(data);
+        fetchFaqs(data.id);
+      }
     }
 
     setLoading(false);
@@ -150,6 +172,55 @@ export default function Business() {
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
+          {/* Allowed Domains */}
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium mb-1">
+              Allowed Domains
+              <span className="ml-2 text-xs text-gray-400 font-normal">
+                (comma-separated, e.g. example.com, www.example.com)
+              </span>
+            </label>
+            <input
+              name="allowed_domains"
+              value={form.allowed_domains}
+              onChange={handleChange}
+              placeholder="example.com, app.example.com"
+              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
+            />
+            <p className="text-xs text-gray-400 mt-1">
+              Only these domains can use your UAT tracking key. Leave empty to allow all (development mode).
+            </p>
+          </div>
+
+          {/* Chatbot / Tracking Key — read only */}
+          {business?.chatbot_key && (
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-1">
+                Tracking Key
+                <span className="ml-2 text-xs text-gray-400 font-normal">
+                  (your public identifier — used in embed snippets)
+                </span>
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  readOnly
+                  value={business.chatbot_key}
+                  className="flex-1 border border-gray-200 bg-gray-50 rounded-lg px-4 py-2 text-gray-600 font-mono text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(business.chatbot_key);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                  }}
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition"
+                >
+                  {copied ? '✓ Copied' : 'Copy'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="mt-8">

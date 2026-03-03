@@ -38,7 +38,7 @@ const Hero: React.FC = () => {
           </div>
           
           <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            <span className="shimmer-text">Sophisticate</span> Your Website with
+            <span className="shimmer-text">Sophistication</span> Your Website with
             <span className="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent"> AI Services</span>
           </h1>
           

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import {
   LineChart,
@@ -12,7 +12,6 @@ import {
 
 export default function DashboardHome() {
   const [userName, setUserName] = useState("");
-  const [clientId, setClientId] = useState<string | null>(null);
 
   const [totalInteractions, setTotalInteractions] = useState(0);
   const [emailResponses, setEmailResponses] = useState(0);
@@ -55,16 +54,15 @@ export default function DashboardHome() {
     if (!business) return;
 
     const cid = business.id;
-    setClientId(cid);
 
     const { data: recent } = await supabase
-    .from("uat_events")
-    .select("event_type, page_url, occurred_at")
-    .eq("client_id", cid)
-    .order("occurred_at", { ascending: false })
-    .limit(5);
+      .from("uat_events")
+      .select("event_type, page_url, occurred_at")
+      .eq("client_id", cid)
+      .order("occurred_at", { ascending: false })
+      .limit(5);
 
-  setRecentEvents(recent || []);
+    setRecentEvents(recent || []);
 
     /* -------------------------
        TOTAL INTERACTIONS
@@ -81,7 +79,8 @@ export default function DashboardHome() {
     ------------------------- */
     const { count: emailCount } = await supabase
       .from("email_logs")
-      .select("*", { count: "exact", head: true });
+      .select("*", { count: "exact", head: true })
+      .eq("business_id", cid);
 
     setEmailResponses(emailCount || 0);
 
@@ -90,7 +89,8 @@ export default function DashboardHome() {
     ------------------------- */
     const { count: ttsCount } = await supabase
       .from("tts_events")
-      .select("*", { count: "exact", head: true });
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id);
 
     setTtsConversions(ttsCount || 0);
 
@@ -102,12 +102,12 @@ export default function DashboardHome() {
 
     const { data: activeEvents } = await supabase
       .from("uat_events")
-      .select("user_id")
+      .select("session_id")
       .eq("client_id", cid)
       .gte("occurred_at", yesterday.toISOString());
 
     const uniqueUsers = new Set(
-      activeEvents?.map((e: any) => e.user_id)
+      activeEvents?.map((e: any) => e.session_id)
     );
 
     setActiveUsers(uniqueUsers.size);
