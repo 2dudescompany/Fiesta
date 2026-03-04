@@ -1,41 +1,87 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Home, MessageSquare, Mail, Volume2, Code, Settings, BarChart3, CreditCard, Building2, Mouse } from 'lucide-react';
-import { Eye } from 'lucide-react'; // add icon
+import {
+  Home, MessageSquare, Mail, Volume2,
+  Code, Settings, CreditCard, Mouse,
+  ChevronLeft, ChevronRight,
+} from 'lucide-react';
+import { useTimeTheme } from '../../hooks/useTimeTheme';
+
+const navItems = [
+  { to: '/dashboard', icon: Home, label: 'Dashboard', end: true },
+  { to: '/dashboard/chatbot', icon: MessageSquare, label: 'Chatbot' },
+  { to: '/dashboard/email', icon: Mail, label: 'Email Responder' },
+  { to: '/dashboard/tts', icon: Volume2, label: 'Text-to-Speech' },
+  { to: '/dashboard/uat', icon: Mouse, label: 'User Attention' },
+  { to: '/dashboard/integrations', icon: Code, label: 'Integrations' },
+  { to: '/dashboard/billing', icon: CreditCard, label: 'Billing' },
+  { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
+];
 
 const Sidebar: React.FC = () => {
-  const navItems = [
-    //{ to: '/dashboard/business', icon: Building2, label: 'Business' },
-    { to: '/dashboard', icon: Home, label: 'Dashboard', end: true },
-    //{ to: '/dashboard/analytics', icon: BarChart3, label: 'Analytics' },
-    { to: '/dashboard/chatbot', icon: MessageSquare, label: 'Chatbot' },
-    { to: '/dashboard/email', icon: Mail, label: 'Email Responder' },
-    { to: '/dashboard/tts', icon: Volume2, label: 'Text-to-Speech' },
-    { to: '/dashboard/uat', icon: Mouse, label: 'User Attention' },
-    { to: '/dashboard/integrations', icon: Code, label: 'Integrations' },
-    { to: '/dashboard/billing', icon: CreditCard, label: 'Billing' },
-    { to: '/dashboard/settings', icon: Settings, label: 'Settings' },
+  const [collapsed, setCollapsed] = useState(false);
+  const theme = useTimeTheme();
+  const isDark = theme === 'dark';
 
-  ];
+  const bg = isDark
+    ? 'bg-gradient-to-b from-gray-950 via-gray-900 to-slate-950 border-white/10'
+    : 'bg-gradient-to-b from-slate-50 via-white to-blue-50 border-gray-200';
+  const activeItem = isDark
+    ? 'bg-indigo-500/20 text-indigo-300 border-r-2 border-indigo-400'
+    : 'bg-indigo-50 text-indigo-700 border-r-2 border-indigo-600';
+  const inactiveItem = isDark
+    ? 'text-white/60 hover:bg-white/8 hover:text-white'
+    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
+  const toggleBtn = isDark
+    ? 'bg-gray-800 border-white/10 text-white/60 hover:text-white hover:bg-gray-700'
+    : 'bg-white border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50';
 
   return (
-    <aside className="w-64 bg-white border-r bg-gradient-to-b from-black-100 to-zinc-100 border-gray-200 min-h-screen ">
-      <nav className="p-4 space-y-2">
-        {navItems.map((item) => (
+    <aside
+      className={`
+        relative flex-shrink-0 border-r min-h-screen
+        transition-all duration-300
+        ${bg}
+        ${collapsed ? 'w-16' : 'w-64'}
+      `}
+    >
+      {/* Collapse toggle button */}
+      <button
+        onClick={() => setCollapsed(c => !c)}
+        title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        className={`
+          absolute -right-3.5 top-6
+          flex items-center justify-center
+          w-7 h-7 rounded-full border shadow-sm
+          z-10 transition-all duration-200
+          ${toggleBtn}
+        `}
+      >
+        {collapsed
+          ? <ChevronRight size={13} />
+          : <ChevronLeft size={13} />
+        }
+      </button>
+
+      <nav className="p-3 space-y-1 pt-4">
+        {navItems.map(item => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.end}
+            title={collapsed ? item.label : undefined}
             className={({ isActive }) =>
-              `flex items-center cursor-pointer hover:shadow-lg space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
-                isActive
-                  ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-700 hover:bg-gray-50'
-              }`
+              `flex items-center gap-3 px-3 py-2.5 rounded-lg
+               transition-all duration-200 cursor-pointer
+               ${isActive ? activeItem : inactiveItem}
+               ${collapsed ? 'justify-center' : ''}
+              `
             }
           >
-            <item.icon className="w-5 h-5" />
-            <span className="font-medium">{item.label}</span>
+            <item.icon className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && (
+              <span className="font-medium text-sm truncate">{item.label}</span>
+            )}
           </NavLink>
         ))}
       </nav>

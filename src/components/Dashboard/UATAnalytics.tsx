@@ -216,32 +216,43 @@ export default function UATAnalytics() {
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const dates = [...new Set(heatmap.map(h => h.date))];
-  const getHeat = (date: string, hour: number) =>
-    heatmap.find(h => h.date === date && h.hour === hour)?.interactions || 0;
-
+  const getHeat = (date: string, hour: number) => {
+    const localHour = (hour - 5 + 24) % 24; // adjust from UTC to IST approx
+    return heatmap.find(h => h.date === date && h.hour === localHour)?.interactions || 0;
+  };
   // ── Render ─────────────────────────────────────────────────────
   return (
-    <div className={`min-h-screen -m-8 ${isDark
-        ? "bg-gradient-to-br from-gray-950 via-gray-900 to-slate-950"
-        : "bg-gradient-to-br from-slate-50 via-white to-blue-50"
-      }`}>
-      <div className="p-8 space-y-6" id="analyticsExport">
+    <div className="relative min-h-screen overflow-x-hidden -m-8">
+
+      {/* Full-page background video */}
+      <video
+        key={isDark ? 'uat-night' : 'uat-day'}
+        autoPlay muted loop playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none"
+      >
+        <source src={isDark ? '/videos/UATnight.mp4' : '/videos/uat-bg-day.mp4'} type="video/mp4" />
+      </video>
+
+      {/* Overlay for readability */}
+      <div className={`absolute inset-0 z-10 ${isDark ? 'bg-black/65' : 'bg-white/72'}`} />
+
+      <div className="relative z-20 p-6 space-y-6" id="analyticsExport">
 
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className={`text-2xl font-bold ${isDark ? "text-white" : "text-gray-900"}`}>
+            <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
               User Attention Analytics
             </h2>
-            <p className={`text-sm mt-0.5 ${isDark ? "text-white/50" : "text-gray-500"}`}>
+            <p className={`text-sm mt-0.5 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
               Real-time interaction data from your tracked website
             </p>
           </div>
           <DownloadReportButton targetId="analyticsExport" fileName="uat-report.pdf" />
         </div>
 
-        {/* ── Stat Cards Row 1 ──────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* ── Stat Cards Row 1 ── */}
+        <div className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 [&>*]:transition-all [&>*]:duration-200 ${isDark ? '[&>*:hover]:shadow-[0_0_10px_rgba(129,140,248,0.2)]' : '[&>*:hover]:shadow-[0_0_10px_rgba(37,99,235,0.10)]'}`}>
           <ThemedStatCard label="Tracked Elements" value={data.length} />
           <ThemedStatCard label="Total Clicks" value={data.reduce((a, b) => a + b.click_count, 0)} />
           <ThemedStatCard label="Total Hovers" value={data.reduce((a, b) => a + b.hover_count, 0)} />
@@ -255,8 +266,8 @@ export default function UATAnalytics() {
           />
         </div>
 
-        {/* ── Stat Cards Row 2 ──────────────────────────────── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {/* ── Stat Cards Row 2 ── */}
+        <div className={`grid grid-cols-2 sm:grid-cols-4 gap-3 [&>*]:transition-all [&>*]:duration-200 ${isDark ? '[&>*:hover]:shadow-[0_0_10px_rgba(129,140,248,0.2)]' : '[&>*:hover]:shadow-[0_0_10px_rgba(37,99,235,0.10)]'}`}>
           <ThemedStatCard label="Bounce Rate" value={`${bounceRate}%`} sub="single-page visits" />
           <ThemedStatCard label="Avg Duration" value={avgDuration > 0 ? `${avgDuration}s` : "—"} sub="per session" />
           <ThemedStatCard label="Rage Clicks" value={rageCount} sub="frustration signals" />

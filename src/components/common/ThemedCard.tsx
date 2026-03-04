@@ -19,19 +19,20 @@ interface ThemedCardProps {
 export function ThemedCard({ children, className = "", accent = false, solid = false }: ThemedCardProps) {
     const theme = useTimeTheme();
 
-    const base = "rounded-xl transition-all duration-300 ";
+    const base =
+        "rounded-2xl transition-all duration-300 ease-out hover:shadow-xl hover:-translate-y-[2px] ";
 
     const light = solid
-        ? "bg-white border border-gray-200 shadow-sm "
+        ? "bg-white border border-gray-200 shadow-md "
         : accent
-            ? "bg-blue-50 border border-blue-200 shadow-sm "
-            : "bg-white border border-gray-200 shadow-sm ";
+            ? "bg-gradient-to-br from-blue-50 via-white to-white border border-blue-200 shadow-md "
+            : "bg-white border border-gray-200 shadow-md ";
 
     const dark = solid
-        ? "bg-gray-900/80 border border-white/10 shadow-lg "
+        ? "bg-gray-900/90 border border-white/10 shadow-2xl "
         : accent
-            ? "bg-blue-900/30 border border-blue-400/30 shadow-lg backdrop-blur-md "
-            : "bg-white/8 border border-white/15 shadow-lg backdrop-blur-md ";
+            ? "bg-gradient-to-br from-blue-900/30 via-blue-800/20 to-transparent border border-blue-400/30 shadow-2xl backdrop-blur-xl "
+            : "bg-white/10 border border-white/15 shadow-2xl backdrop-blur-xl ";
 
     return (
         <div className={`${base} ${theme === "dark" ? dark : light} ${className}`}>
@@ -60,29 +61,43 @@ export function ThemedStatCard({
     const isDark = theme === "dark";
 
     return (
-        <ThemedCard accent={accent} className="p-4">
+        <ThemedCard accent={accent} className="p-5">
             <div className="flex items-start justify-between">
-                <p className={`text-xs font-medium uppercase tracking-wide ${isDark ? "text-white/50" : "text-gray-500"}`}>
+                <p className={`text-[11px] font-semibold uppercase tracking-wider ${isDark ? "text-white/50" : "text-gray-500"}`}>
                     {label}
                 </p>
-                {icon && <span className={`${isDark ? "text-white/40" : "text-gray-400"}`}>{icon}</span>}
+                {icon && (
+                    <span className={`${isDark ? "text-white/40" : "text-gray-400"} transition-opacity duration-300`}>
+                        {icon}
+                    </span>
+                )}
             </div>
 
             {unavailable ? (
                 <>
-                    <p className={`text-2xl font-bold mt-1 ${isDark ? "text-white/20" : "text-gray-300"}`}>—</p>
-                    <p className={`text-xs mt-1 ${isDark ? "text-orange-400/70" : "text-orange-400"}`}>
+                    <p className={`text-3xl font-semibold mt-2 ${isDark ? "text-white/20" : "text-gray-300"}`}>—</p>
+                    <p className={`text-xs mt-1 font-medium ${isDark ? "text-orange-400/70" : "text-orange-500"}`}>
                         Limited by browser / ad-blocker
                     </p>
                 </>
             ) : (
                 <>
-                    <p className={`text-2xl font-bold mt-1 ${accent
-                            ? isDark ? "text-blue-300" : "text-blue-600"
-                            : isDark ? "text-white" : "text-gray-900"
-                        }`}>{value}</p>
+                    <p
+                        className={`text-3xl font-semibold tracking-tight mt-2 ${accent
+                                ? isDark
+                                    ? "text-blue-300 drop-shadow-[0_0_6px_rgba(59,130,246,0.35)]"
+                                    : "text-blue-600"
+                                : isDark
+                                    ? "text-white"
+                                    : "text-gray-900"
+                            }`}
+                    >
+                        {value}
+                    </p>
                     {sub && (
-                        <p className={`text-xs mt-0.5 ${isDark ? "text-white/40" : "text-gray-400"}`}>{sub}</p>
+                        <p className={`text-sm mt-1 ${isDark ? "text-white/40" : "text-gray-400"}`}>
+                            {sub}
+                        </p>
                     )}
                 </>
             )}
