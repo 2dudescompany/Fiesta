@@ -192,7 +192,15 @@
         var el = e.target;
         var rage = false;
         try { rage = checkRageClick(el); } catch (e_) { }
-        enqueue(rage ? 'rage_click' : 'click', el);
+
+        if (rage) {
+            // Rage clicks bypass the meaningful() filter — always record them
+            if (!ready || !CLIENT_ID) return;
+            queue.push(buildRow('rage_click', el));
+            if (queue.length >= MAX_BATCH) flush();
+        } else {
+            enqueue('click', el);
+        }
     });
 
     var hoverTimer = null;

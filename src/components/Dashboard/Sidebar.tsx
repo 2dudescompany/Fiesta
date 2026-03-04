@@ -32,9 +32,6 @@ const Sidebar: React.FC = () => {
   const inactiveItem = isDark
     ? 'text-white/60 hover:bg-white/8 hover:text-white'
     : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900';
-  const toggleBtn = isDark
-    ? 'bg-gray-800 border-white/10 text-white/60 hover:text-white hover:bg-gray-700'
-    : 'bg-white border-gray-200 text-gray-400 hover:text-gray-700 hover:bg-gray-50';
 
   return (
     <aside
@@ -50,17 +47,20 @@ const Sidebar: React.FC = () => {
         onClick={() => setCollapsed(c => !c)}
         title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         className={`
-          absolute -right-3.5 top-6
+          absolute -right-4 top-5
           flex items-center justify-center
-          w-7 h-7 rounded-full border shadow-sm
-          z-10 transition-all duration-200
-          ${toggleBtn}
+          w-8 h-8 rounded-full
+          border-2 shadow-md
+          z-10 cursor-pointer
+          transition-all duration-200
+          active:scale-90
+          ${isDark
+            ? 'bg-gray-800 border-gray-600 text-white/80 hover:bg-indigo-600 hover:border-indigo-400 hover:text-white'
+            : 'bg-white border-gray-300 text-gray-500 hover:bg-indigo-600 hover:border-indigo-500 hover:text-white'
+          }
         `}
       >
-        {collapsed
-          ? <ChevronRight size={13} />
-          : <ChevronLeft size={13} />
-        }
+        {collapsed ? <ChevronRight size={14} strokeWidth={2.5} /> : <ChevronLeft size={14} strokeWidth={2.5} />}
       </button>
 
       <nav className="p-3 space-y-1 pt-4">
