@@ -1,72 +1,139 @@
 import { useState } from "react";
 
-export default function FAQDocGenerator({ businessId, supabase }) {
+export default function FAQDocGenerator({ businessId, supabase }: any) {
 
   const [file, setFile] = useState<File | null>(null);
   const [faqs, setFaqs] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const generateFAQs = async () => {
 
-    if (!file) return;
+    if (!file) {
+      alert("Please select a file first.");
+      return;
+    }
 
-    const formData = new FormData();
-    formData.append("file", file);
+    try {
 
-    const res = await fetch("/api/generate-faq", {
-      method: "POST",
-      body: formData
-    });
+      setLoading(true);
 
-    const data = await res.json();
+      const formData = new FormData();
+      formData.append("file", file);
 
-    const parsed = JSON.parse(data.faqs);
+      const res = await fetch("/api/generate-faq", {
+        method: "POST",
+        body: formData
+      });
 
-    setFaqs(parsed);
+      if (!res.ok) {
+        throw new Error("FAQ generation failed");
+      }
+
+      const data = await res.json();
+
+      setFaqs(data.faqs || []);
+
+    } catch (err) {
+
+      console.error(err);
+      alert("Failed to generate FAQs");
+
+    } finally {
+
+      setLoading(false);
+
+    }
+
   };
 
-  const approveFAQ = async (faq) => {
+  const approveFAQ = async (faq: any) => {
 
-    await supabase
-      .from("business_faq")
-      .insert({
-        business_id: businessId,
-        question: faq.question,
-        answer: faq.answer,
-        keywords: faq.keywords
-      });
+    try {
+
+      await supabase
+        .from("business_faq")
+        .insert({
+          business_id: businessId,
+          question: faq.question,
+          answer: faq.answer,
+          keywords: faq.keywords
+        });
+
+      alert("FAQ added");
+
+    } catch (err) {
+
+      console.error(err);
+      alert("Failed to insert FAQ");
+
+    }
 
   };
 
   return (
+
     <div style={{ marginTop: "40px" }}>
 
       <h3>Generate FAQs From Document</h3>
 
-      <input
-        type="file"
-        onChange={(e) => setFile(e.target.files?.[0] || null)}
-      />
+      <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
 
-      <button onClick={generateFAQs}>
-        Generate FAQs
-      </button>
+        <input
+          type="file"
+          onChange={(e) => setFile(e.target.files?.[0] || null)}
+        />
 
-      {faqs.map((faq, i) => (
-        <div key={i} style={{ marginTop: "20px" }}>
+        <button
+          onClick={generateFAQs}
+          disabled={loading}
+        >
+          {loading ? "Generating..." : "Generate FAQs"}
+        </button>
 
-          <b>{faq.question}</b>
+      </div>
 
-          <p>{faq.answer}</p>
+      {faqs.length > 0 && (
 
-          <p><i>{faq.keywords?.join(", ")}</i></p>
+        <div style={{ marginTop: "20px" }}>
 
-          <button onClick={() => approveFAQ(faq)}>
-            Approve
-          </button>
+          {faqs.map((faq, i) => (
+
+            <div
+              key={i}
+              style={{
+                border: "1px solid #ddd",
+                padding: "12px",
+                marginBottom: "10px",
+                borderRadius: "6px"
+              }}
+            >
+
+              <p>
+                <strong>{faq.question}</strong>
+              </p>
+
+              <p>{faq.answer}</p>
+
+              <p style={{ fontSize: "12px", color: "#666" }}>
+                Keywords: {faq.keywords?.join(", ")}
+              </p>
+
+              <button
+                onClick={() => approveFAQ(faq)}
+              >
+                Approve
+              </button>
+
+            </div>
+
+          ))}
 
         </div>
-      ))}
+
+      )}
 
     </div>
+
   );
+
 }

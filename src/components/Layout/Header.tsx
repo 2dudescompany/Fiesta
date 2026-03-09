@@ -4,68 +4,55 @@ import { Bot, User, LogOut, ChevronDown } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { supabase } from "../../lib/supabase";
 import { ThemeContext } from "../../contexts/ThemeContext";
-import { ThemeMode } from "../../utils/timeTheme";
 
 // ─── 3-Position Sliding Theme Toggle ─────────────────────────────────────────
 
-const MODES: { mode: ThemeMode; icon: string; label: string }[] = [
-  { mode: "light", icon: "☀️", label: "Light" },
-  { mode: "dark", icon: "🌙", label: "Dark" },
-  { mode: "time", icon: "🕐", label: "Auto" },
-];
+// ─── Integrated Pill Theme Toggle ─────────────────────────────────────────
 
 const ThemeToggle: React.FC = () => {
   const ctx = useContext(ThemeContext);
   if (!ctx) return null;
   const { mode, setMode } = ctx;
-  const idx = MODES.findIndex(m => m.mode === mode);
+
+  const isLight = mode === "light" || (mode === "time" && new Date().getHours() >= 6 && new Date().getHours() < 18);
+  const isAuto = mode === "time";
 
   return (
-    <div className="relative flex items-center">
-      {/* Track */}
-      <div className="
-        relative flex items-center
-        bg-white/10 backdrop-blur-sm
-        border border-white/20
-        rounded-full p-0.5
-        shadow-inner
-        select-none
-      ">
-        {/* Animated thumb */}
-        <div
-          className="
-            absolute h-7 rounded-full
-            bg-white/25 border border-white/40
-            shadow-md backdrop-blur-sm
-            transition-all duration-300 ease-in-out
-          "
-          style={{
-            width: "calc(33.333% - 2px)",
-            left: `calc(${idx * 33.333}% + 1px)`,
-          }}
-        />
+    <div className="flex items-center bg-black/20 border border-white/10 rounded-full p-1 h-8 w-20 shadow-inner">
+      {/* Auto (Time) Indicator button (approx left part) */}
+      <button
+        onClick={() => setMode(isAuto ? (isLight ? "light" : "dark") : "time")}
+        title="Auto Theme (Time-based)"
+        className={`
+          flex items-center justify-center aspect-square h-full rounded-full transition-colors z-10
+          ${isAuto ? "bg-indigo-500/80 text-white shadow-md" : "text-white/50 hover:text-white hover:bg-white/10"}
+        `}
+      >
+        <span className="text-[11px] leading-none mb-px">{isAuto ? "🕐" : "🕛"}</span>
+      </button>
 
-        {/* Mode buttons */}
-        {MODES.map(({ mode: m, icon, label }, i) => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            aria-label={`Switch to ${label} mode`}
-            title={label}
-            className={`
-              relative z-10 flex items-center gap-1 px-2.5 py-1
-              rounded-full text-xs font-semibold
-              transition-colors duration-200 whitespace-nowrap
-              ${idx === i ? "text-white" : "text-white/55 hover:text-white/85"}
-            `}
-          >
-            <span className={`text-sm leading-none transition-transform duration-200 ${idx === i ? "scale-110" : ""}`}>
-              {icon}
-            </span>
-            <span className="hidden sm:inline">{label}</span>
-          </button>
-        ))}
-      </div>
+      {/* Light/Dark Toggle in the remaining space */}
+      <button
+        onClick={() => setMode(isLight ? "dark" : "light")}
+        className={`
+          relative flex-1 h-full ml-1 rounded-full transition-colors duration-300 flex items-center px-0.5
+          ${isLight ? "bg-slate-200" : "bg-slate-700"}
+          ${isAuto ? "opacity-50" : "opacity-100"}
+        `}
+      >
+        <div
+          className={`
+            w-4 h-4 bg-white rounded-full shadow-sm transform transition-transform duration-300 flex items-center justify-center z-10
+            ${isLight ? "translate-x-0" : "translate-x-5"}
+          `}
+        >
+          {isLight ? (
+            <span className="text-yellow-500 text-[9px] leading-none">☀️</span>
+          ) : (
+            <span className="text-blue-300 text-[9px] leading-none">🌙</span>
+          )}
+        </div>
+      </button>
     </div>
   );
 };
@@ -104,7 +91,7 @@ const Header: React.FC = () => {
       backdrop-blur-md
       transition-all duration-300
     ">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="max-w-[100rem] mx-auto px-4 sm:px-6 lg:px-12">
         <div className="flex justify-between items-center h-16">
 
           {/* Logo */}
