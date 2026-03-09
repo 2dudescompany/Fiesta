@@ -2,10 +2,6 @@ import formidable from "formidable";
 import fs from "fs";
 import mammoth from "mammoth";
 import Groq from "groq-sdk";
-import { createRequire } from "module";
-
-const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
 
 export const config = {
   api: {
@@ -19,14 +15,15 @@ const groq = new Groq({
 
 async function extractText(filePath, type) {
 
-  if (type.includes("pdf")) {
-    const data = await pdf(fs.readFileSync(filePath));
-    return data.text;
-  }
-
-  if (type.includes("word")) {
+  if (type?.includes("word")) {
     const result = await mammoth.extractRawText({ path: filePath });
     return result.value;
+  }
+
+  if (type?.includes("pdf")) {
+    // basic PDF fallback (no native dependencies)
+    const buffer = fs.readFileSync(filePath);
+    return buffer.toString("utf8");
   }
 
   return fs.readFileSync(filePath, "utf8");
@@ -46,6 +43,7 @@ function chunkText(text, size = 6000) {
 function extractJSON(str) {
 
   try {
+
     const start = str.indexOf("[");
     const end = str.lastIndexOf("]");
 
@@ -54,6 +52,7 @@ function extractJSON(str) {
     }
 
     return [];
+
   } catch {
     return [];
   }
@@ -67,6 +66,8 @@ function removeDuplicates(faqs) {
 
     const key = f.question?.toLowerCase();
 
+    if (!key) return false;
+
     if (seen.has(key)) return false;
 
     seen.add(key);
@@ -74,7 +75,6 @@ function removeDuplicates(faqs) {
     return true;
 
   });
-
 }
 
 export default async function handler(req, res) {
@@ -101,6 +101,10 @@ export default async function handler(req, res) {
 
       const text = await extractText(file.filepath, file.mimetype);
 
+      if (!text || text.length < 20) {
+        return res.status(400).json({ error: "Document empty or unreadable" });
+      }
+
       const chunks = chunkText(text);
 
       let allFaqs = [];
@@ -108,9 +112,9 @@ export default async function handler(req, res) {
       for (const chunk of chunks) {
 
         const prompt = `
-Generate Business FAQs from this document.
+Generate business FAQs from this document.
 
-Return STRICT JSON:
+Return STRICT JSON format:
 
 [
 {
@@ -130,7 +134,7 @@ Return STRICT JSON:
           ]
         });
 
-        const output = completion.choices[0].message.content;
+        const output = completion?.choices?.[0]?.message?.content || "";
 
         const parsed = extractJSON(output);
 
@@ -145,7 +149,7 @@ Return STRICT JSON:
 
     } catch (error) {
 
-      console.error(error);
+      console.error("FAQ generation error:", error);
 
       res.status(500).json({
         error: "FAQ generation failed"
