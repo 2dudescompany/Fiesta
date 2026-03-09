@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
+import FAQDocGenerator from "./FAQDocGenerator";
 
 export default function Business() {
   const { user } = useAuth();
@@ -15,7 +16,7 @@ export default function Business() {
     support_email: "",
     support_phone: "",
     website_url: "",
-    allowed_domains: "",   // stored as comma-separated string in UI, text[] in DB
+    allowed_domains: "",
   });
 
   const [copied, setCopied] = useState(false);
@@ -32,7 +33,6 @@ export default function Business() {
     fetchBusiness();
   }, [user]);
 
-  // Fetch business
   const fetchBusiness = async () => {
     const { data } = await supabase
       .from("businesses")
@@ -49,14 +49,13 @@ export default function Business() {
         support_email: data.support_email || "",
         support_phone: data.support_phone || "",
         website_url: data.website_url || "",
-        // allowed_domains: text[] in DB → comma-separated string in UI
         allowed_domains: (data.allowed_domains || []).join(", "),
       });
+
       fetchFaqs(data.id);
     }
   };
 
-  // Fetch FAQs
   const fetchFaqs = async (businessId: string) => {
     const { data } = await supabase
       .from("business_faq")
@@ -74,15 +73,16 @@ export default function Business() {
     setFaqForm({ ...faqForm, [e.target.name]: e.target.value });
   };
 
-  // Save business
   const saveBusiness = async () => {
     if (!user) return;
+
     setLoading(true);
 
-    // Convert comma-separated allowed_domains string → cleaned text[]
     const domainArray = form.allowed_domains
       .split(",")
-      .map((d: string) => d.trim().replace(/^https?:\/\//i, '').replace(/\/.*$/, ''))
+      .map((d: string) =>
+        d.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "")
+      )
       .filter(Boolean);
 
     const payload = {
@@ -96,10 +96,7 @@ export default function Business() {
     };
 
     if (business) {
-      await supabase
-        .from("businesses")
-        .update(payload)
-        .eq("id", business.id);
+      await supabase.from("businesses").update(payload).eq("id", business.id);
     } else {
       const { data } = await supabase
         .from("businesses")
@@ -121,7 +118,6 @@ export default function Business() {
     alert("Business details saved.");
   };
 
-  // Add FAQ
   const addFaq = async () => {
     if (!business) return;
 
@@ -132,24 +128,33 @@ export default function Business() {
       keywords: faqForm.keywords.split(","),
     });
 
-    setFaqForm({ question: "", answer: "", keywords: "" });
+    setFaqForm({
+      question: "",
+      answer: "",
+      keywords: "",
+    });
+
     fetchFaqs(business.id);
   };
 
   return (
     <div className="space-y-8">
+
       {/* Business Profile */}
+
       <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
         <div className="mb-6">
           <h1 className="text-2xl font-semibold text-gray-800">
             Business Profile
           </h1>
+
           <p className="text-gray-500 mt-1">
             Add or update your business details anytime.
           </p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
           <Input label="Business Name" name="business_name" value={form.business_name} onChange={handleChange} />
           <Input label="Industry" name="industry" value={form.industry} onChange={handleChange} />
           <Input label="Support Email" name="support_email" value={form.support_email} onChange={handleChange} />
@@ -163,6 +168,7 @@ export default function Business() {
             <label className="block text-sm font-medium mb-1">
               Business Description
             </label>
+
             <textarea
               name="description"
               value={form.description}
@@ -172,14 +178,15 @@ export default function Business() {
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
             />
           </div>
-          {/* Allowed Domains */}
+
           <div className="md:col-span-2">
             <label className="block text-sm font-medium mb-1">
               Allowed Domains
               <span className="ml-2 text-xs text-gray-400 font-normal">
-                (comma-separated, e.g. example.com, www.example.com)
+                (comma-separated)
               </span>
             </label>
+
             <input
               name="allowed_domains"
               value={form.allowed_domains}
@@ -187,56 +194,62 @@ export default function Business() {
               placeholder="example.com, app.example.com"
               className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-blue-500 outline-none"
             />
+
             <p className="text-xs text-gray-400 mt-1">
-              Only these domains can use your UAT tracking key. Leave empty to allow all (development mode).
+              Only these domains can use your UAT tracking key.
             </p>
           </div>
 
-          {/* Chatbot / Tracking Key — read only */}
           {business?.chatbot_key && (
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-1">
                 Tracking Key
-                <span className="ml-2 text-xs text-gray-400 font-normal">
-                  (your public identifier — used in embed snippets)
-                </span>
               </label>
+
               <div className="flex items-center gap-2">
+
                 <input
                   readOnly
                   value={business.chatbot_key}
                   className="flex-1 border border-gray-200 bg-gray-50 rounded-lg px-4 py-2 text-gray-600 font-mono text-sm"
                 />
+
                 <button
-                  type="button"
                   onClick={() => {
                     navigator.clipboard.writeText(business.chatbot_key);
                     setCopied(true);
                     setTimeout(() => setCopied(false), 2000);
                   }}
-                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition"
+                  className="px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm"
                 >
-                  {copied ? '✓ Copied' : 'Copy'}
+                  {copied ? "✓ Copied" : "Copy"}
                 </button>
+
               </div>
             </div>
           )}
+
         </div>
 
         <div className="mt-8">
           <button
             onClick={saveBusiness}
             disabled={loading}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
           >
             {business ? "Update Business" : "Save Business"}
           </button>
         </div>
+
       </div>
 
       {/* FAQ Manager */}
+
       <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-        <h2 className="text-xl font-semibold mb-4">FAQ Manager</h2>
+
+        <h2 className="text-xl font-semibold mb-4">
+          FAQ Manager
+        </h2>
 
         {!business && (
           <p className="text-gray-500">
@@ -262,8 +275,13 @@ export default function Business() {
               ))}
             </div>
 
+            {/* Add FAQ manually */}
+
             <div className="border-t pt-6 space-y-4">
-              <h3 className="font-medium">Add New FAQ</h3>
+
+              <h3 className="font-medium">
+                Add New FAQ
+              </h3>
 
               <input
                 name="question"
@@ -284,7 +302,7 @@ export default function Business() {
 
               <input
                 name="keywords"
-                placeholder="Keywords (comma separated)"
+                placeholder="Keywords"
                 value={faqForm.keywords}
                 onChange={handleFaqChange}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2"
@@ -297,20 +315,32 @@ export default function Business() {
                 Add FAQ
               </button>
             </div>
+
+            {/* AI FAQ Generator */}
+
+            <div className="border-t pt-6 mt-6">
+              <FAQDocGenerator
+                businessId={business.id}
+                supabase={supabase}
+              />
+            </div>
+
           </>
         )}
+
       </div>
+
     </div>
   );
 }
 
-/* ---------- Reusable Input ---------- */
 function Input({ label, name, value, onChange }: any) {
   return (
     <div>
       <label className="block text-sm font-medium mb-1">
         {label}
       </label>
+
       <input
         name={name}
         value={value}
@@ -321,7 +351,6 @@ function Input({ label, name, value, onChange }: any) {
   );
 }
 
-/* ---------- FAQ Item ---------- */
 function FaqItem({ faq, refreshFaqs }: any) {
   const [editing, setEditing] = useState(false);
 
@@ -332,7 +361,10 @@ function FaqItem({ faq, refreshFaqs }: any) {
   });
 
   const handleChange = (e: any) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    setForm({
+      ...form,
+      [e.target.name]: e.target.value,
+    });
   };
 
   const saveUpdate = async () => {
@@ -363,36 +395,79 @@ function FaqItem({ faq, refreshFaqs }: any) {
   if (editing) {
     return (
       <div className="border border-gray-200 rounded-lg p-4 space-y-2">
-        <input name="question" value={form.question} onChange={handleChange} className="w-full border rounded px-3 py-2" />
-        <textarea name="answer" value={form.answer} onChange={handleChange} className="w-full border rounded px-3 py-2" />
-        <input name="keywords" value={form.keywords} onChange={handleChange} className="w-full border rounded px-3 py-2" />
+
+        <input
+          name="question"
+          value={form.question}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+
+        <textarea
+          name="answer"
+          value={form.answer}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
+
+        <input
+          name="keywords"
+          value={form.keywords}
+          onChange={handleChange}
+          className="w-full border rounded px-3 py-2"
+        />
 
         <div className="flex gap-2">
-          <button onClick={saveUpdate} className="bg-blue-600 text-white px-4 py-1 rounded">
+
+          <button
+            onClick={saveUpdate}
+            className="bg-blue-600 text-white px-4 py-1 rounded"
+          >
             Save
           </button>
-          <button onClick={() => setEditing(false)} className="border px-4 py-1 rounded">
+
+          <button
+            onClick={() => setEditing(false)}
+            className="border px-4 py-1 rounded"
+          >
             Cancel
           </button>
+
         </div>
+
       </div>
     );
   }
 
   return (
     <div className="border border-gray-200 rounded-lg p-4">
-      <p className="font-medium text-gray-800">{faq.question}</p>
-      <p className="text-gray-600 mt-1">{faq.answer}</p>
+
+      <p className="font-medium text-gray-800">
+        {faq.question}
+      </p>
+
+      <p className="text-gray-600 mt-1">
+        {faq.answer}
+      </p>
 
       <div className="flex gap-3 mt-3">
-        <button onClick={() => setEditing(true)} className="text-blue-600 text-sm">
+
+        <button
+          onClick={() => setEditing(true)}
+          className="text-blue-600 text-sm"
+        >
           Edit
         </button>
 
-        <button onClick={deleteFaq} className="text-red-600 text-sm">
+        <button
+          onClick={deleteFaq}
+          className="text-red-600 text-sm"
+        >
           Delete
         </button>
+
       </div>
+
     </div>
   );
 }
