@@ -130,7 +130,7 @@ Return STRICT JSON format:
 `;
 
         const completion = await groq.chat.completions.create({
-          model: "llama3-70b-8192",
+          model: "llama-3.1-8b-instant",
           temperature: 0.2,
           messages: [
             { role: "system", content: "You generate business FAQs." },
