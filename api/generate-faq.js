@@ -1,5 +1,5 @@
-import formidable from "formidable";
 import fs from "fs";
+import formidable from "formidable";
 import mammoth from "mammoth";
 import Groq from "groq-sdk";
 
@@ -21,7 +21,7 @@ async function extractText(filePath, type) {
   }
 
   if (type?.includes("pdf")) {
-    // basic PDF fallback (no native dependencies)
+    // basic PDF fallback without native dependencies
     const buffer = fs.readFileSync(filePath);
     return buffer.toString("utf8");
   }
@@ -29,8 +29,7 @@ async function extractText(filePath, type) {
   return fs.readFileSync(filePath, "utf8");
 }
 
-function chunkText(text, size = 6000) {
-
+function chunkText(text, size = 5000) {
   const chunks = [];
 
   for (let i = 0; i < text.length; i += size) {
@@ -41,9 +40,7 @@ function chunkText(text, size = 6000) {
 }
 
 function extractJSON(str) {
-
   try {
-
     const start = str.indexOf("[");
     const end = str.lastIndexOf("]");
 
@@ -52,28 +49,22 @@ function extractJSON(str) {
     }
 
     return [];
-
   } catch {
     return [];
   }
 }
 
 function removeDuplicates(faqs) {
-
   const seen = new Set();
 
   return faqs.filter(f => {
-
     const key = f.question?.toLowerCase();
 
     if (!key) return false;
-
     if (seen.has(key)) return false;
 
     seen.add(key);
-
     return true;
-
   });
 }
 
@@ -83,7 +74,9 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const form = new formidable.IncomingForm();
+  const form = new formidable.IncomingForm({
+    maxFileSize: 10 * 1024 * 1024
+  });
 
   form.parse(req, async (err, fields, files) => {
 
@@ -143,7 +136,7 @@ Return STRICT JSON format:
 
       const cleaned = removeDuplicates(allFaqs);
 
-      res.status(200).json({
+      return res.status(200).json({
         faqs: cleaned
       });
 
@@ -151,7 +144,7 @@ Return STRICT JSON format:
 
       console.error("FAQ generation error:", error);
 
-      res.status(500).json({
+      return res.status(500).json({
         error: "FAQ generation failed"
       });
 
