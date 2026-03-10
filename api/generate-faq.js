@@ -1,5 +1,5 @@
+import { formidable } from "formidable";
 import fs from "fs";
-import formidable from "formidable";
 import mammoth from "mammoth";
 import Groq from "groq-sdk";
 
@@ -21,7 +21,7 @@ async function extractText(filePath, type) {
   }
 
   if (type?.includes("pdf")) {
-    // basic PDF fallback without native dependencies
+    // Simple fallback without native dependencies
     const buffer = fs.readFileSync(filePath);
     return buffer.toString("utf8");
   }
@@ -30,6 +30,7 @@ async function extractText(filePath, type) {
 }
 
 function chunkText(text, size = 5000) {
+
   const chunks = [];
 
   for (let i = 0; i < text.length; i += size) {
@@ -40,7 +41,9 @@ function chunkText(text, size = 5000) {
 }
 
 function extractJSON(str) {
+
   try {
+
     const start = str.indexOf("[");
     const end = str.lastIndexOf("]");
 
@@ -49,22 +52,27 @@ function extractJSON(str) {
     }
 
     return [];
+
   } catch {
     return [];
   }
 }
 
 function removeDuplicates(faqs) {
+
   const seen = new Set();
 
   return faqs.filter(f => {
+
     const key = f.question?.toLowerCase();
 
     if (!key) return false;
     if (seen.has(key)) return false;
 
     seen.add(key);
+
     return true;
+
   });
 }
 
@@ -74,7 +82,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const form = new formidable.IncomingForm({
+  const form = formidable({
     maxFileSize: 10 * 1024 * 1024
   });
 
@@ -92,7 +100,10 @@ export default async function handler(req, res) {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      const text = await extractText(file.filepath, file.mimetype);
+      const filePath = file.filepath || file.path;
+      const mimeType = file.mimetype || file.type;
+
+      const text = await extractText(filePath, mimeType);
 
       if (!text || text.length < 20) {
         return res.status(400).json({ error: "Document empty or unreadable" });
