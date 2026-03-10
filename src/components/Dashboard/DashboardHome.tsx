@@ -9,9 +9,17 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
+import { ThemedCard, ThemedStatCard } from "../common/ThemedCard";
+import { useTimeTheme } from "../../hooks/useTimeTheme";
 
 export default function DashboardHome() {
+  const theme = useTimeTheme();
+  const isDark = theme === "dark";
+
   const [userName, setUserName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [greeting, setGreeting] = useState("Welcome back");
+  const [nameGlow, setNameGlow] = useState(false);
 
   const [totalInteractions, setTotalInteractions] = useState(0);
   const [emailResponses, setEmailResponses] = useState(0);
@@ -21,6 +29,18 @@ export default function DashboardHome() {
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
 
   useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      setGreeting("Good morning");
+    } else if (hour < 18) {
+      setGreeting("Good afternoon");
+    } else {
+      setGreeting("Good evening");
+    }
+
+    setNameGlow(true);
+    setTimeout(() => setNameGlow(false), 2000);
+
     loadDashboard();
   }, []);
 
@@ -47,12 +67,13 @@ export default function DashboardHome() {
     ------------------------- */
     const { data: business } = await supabase
       .from("businesses")
-      .select("id")
+      .select("id, business_name")
       .eq("user_id", user.id)
       .single();
 
     if (!business) return;
 
+    setBusinessName(business.business_name || "");
     const cid = business.id;
 
     const { data: recent } = await supabase
@@ -113,10 +134,12 @@ export default function DashboardHome() {
     setActiveUsers(uniqueUsers.size);
 
     /* -------------------------
-       WEEKLY SERVICE USAGE
+       WEEKLY SERVICE USAGE (rolling 7-day window)
     ------------------------- */
+    const today = new Date();
     const last7Days = new Date();
-    last7Days.setDate(last7Days.getDate() - 6);
+    last7Days.setDate(today.getDate() - 6);
+    last7Days.setHours(0, 0, 0, 0);
 
     const { data: weeklyEvents } = await supabase
       .from("uat_events")
@@ -124,105 +147,130 @@ export default function DashboardHome() {
       .eq("client_id", cid)
       .gte("occurred_at", last7Days.toISOString());
 
-    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-    const counts: Record<string, number> = {};
+    // Build an ordered list of the last 7 dates as "MMM D" labels
+    const rollingDays: { label: string; dateStr: string }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(today.getDate() - i);
+      const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+      const dateStr = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      rollingDays.push({ label, dateStr });
+    }
 
-    days.forEach((d) => (counts[d] = 0));
+    const counts: Record<string, number> = {};
+    rollingDays.forEach(({ dateStr }) => (counts[dateStr] = 0));
 
     weeklyEvents?.forEach((e: any) => {
-      const d = days[new Date(e.occurred_at).getDay()];
-      counts[d]++;
+      const dateStr = new Date(e.occurred_at).toISOString().slice(0, 10);
+      if (dateStr in counts) counts[dateStr]++;
     });
 
-    const formatted = days.map((d) => ({
-      day: d,
-      interactions: counts[d],
+    const formatted = rollingDays.map(({ label, dateStr }) => ({
+      day: label,
+      interactions: counts[dateStr],
     }));
 
     setWeeklyData(formatted);
   }
 
+  const videoSrc = isDark ? "/videos/nightvideo.mp4" : "/videos/dashboardday.mp4";
+  const fallbackBg = isDark ? "bg-gradient-to-br from-gray-900 via-slate-900 to-black" : "bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50";
+
+  const axisColor = isDark ? "#ffffff55" : "#64748b";
+  const tipStyle = isDark
+    ? { backgroundColor: "#0f172a", border: "1px solid #334155", color: "#e2e8f0", borderRadius: "8px" }
+    : { backgroundColor: "#fff", border: "1px solid #e2e8f0", color: "#1e293b", borderRadius: "8px" };
+
   return (
-    <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">
-          Welcome back, {userName}!
-        </h1>
-        <p className="text-gray-500">
-          Here's what's happening with your AI services today.
-        </p>
-      </div>
+    <div className={`relative min-h-screen -m-8 overflow-hidden ${fallbackBg}`}>
+      {/* Background video */}
+      <video key={videoSrc} autoPlay muted loop playsInline
+        className="absolute inset-0 w-full h-full object-cover z-0 pointer-events-none">
+        <source src={videoSrc} type="video/mp4" />
+      </video>
 
-      {/* Metrics */}
-      <div className="grid md:grid-cols-4 gap-4">
-        <StatCard title="Total Interactions" value={totalInteractions} />
-        <StatCard title="Email Responses" value={emailResponses} />
-        <StatCard title="TTS Conversions" value={ttsConversions} />
-        <StatCard title="Active Users" value={activeUsers} />
-      </div>
+      {/* Overlay keeps text readable */}
+      <div className={`absolute inset-0 z-10 ${isDark ? 'bg-black/65' : 'bg-white/70'}`} />
 
-      {/* Weekly Usage */}
-      <div className="bg-white p-5 rounded-xl shadow">
-        <h2 className="font-semibold mb-4">
-          Weekly Service Usage
-        </h2>
-
-        <ResponsiveContainer width="100%" height={300}>
-          <LineChart data={weeklyData}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="day" />
-            <YAxis />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="interactions"
-              stroke="#2563eb"
-              strokeWidth={3}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="bg-white p-5 rounded-xl shadow">
-        <h2 className="font-semibold mb-4">Recent Activity</h2>
-
-        <div className="space-y-3">
-          {recentEvents.map((e, i) => (
-            <div
-              key={i}
-              className="flex justify-between text-sm border-b pb-2"
+      {/* Content */}
+      <div className="relative z-20 p-8 space-y-6">
+        <div>
+          <h1 className={`text-3xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            {greeting},{" "}
+            <span
+              className={`bg-clip-text text-transparent inline-block ${nameGlow ? "animate-[shimmer_2s_infinite] bg-[linear-gradient(110deg,#2563eb,45%,#e2e8f0,55%,#0d9488)] bg-[length:200%_100%]" : "bg-gradient-to-r from-blue-600 to-teal-600"}`}
             >
-              <div>
-                <p className="font-medium">{e.event_type}</p>
-                <p className="text-gray-500 truncate max-w-md">
-                  {e.page_url}
-                </p>
-              </div>
-
-              <span className="text-gray-400">
-                {new Date(e.occurred_at).toLocaleTimeString()}
-              </span>
-            </div>
-          ))}
+              {userName}
+              {businessName ? ` from ${businessName}` : ""}
+            </span>
+            !
+          </h1>
+          <p className={`mt-1 ${isDark ? 'text-white/50' : 'text-gray-500'}`}>
+            Here's what's happening with your AI services today.
+          </p>
         </div>
+
+        {/* Metrics */}
+        <div className={`grid md:grid-cols-4 gap-4 [&>*]:transition-all [&>*]:duration-200 ${isDark ? '[&>*:hover]:shadow-[0_0_10px_rgba(59,130,246,0.3)]' : '[&>*:hover]:shadow-[0_0_10px_rgba(37,99,235,0.15)]'}`}>
+          <ThemedStatCard label="Total Interactions" value={totalInteractions} />
+          <ThemedStatCard label="Email Responses" value={emailResponses} accent />
+          <ThemedStatCard label="TTS Conversions" value={ttsConversions} />
+          <ThemedStatCard label="Active Users" value={activeUsers} />
+        </div>
+
+        <div className="grid lg:grid-cols-3 gap-6">
+          {/* Weekly Usage */}
+          <ThemedCard className="p-5 lg:col-span-2">
+            <h2 className={`font-semibold mb-6 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+              Weekly Service Usage
+            </h2>
+
+            <ResponsiveContainer width="100%" height={300}>
+              <LineChart data={weeklyData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#ffffff15" : "#e2e8f0"} />
+                <XAxis dataKey="day" tick={{ fill: axisColor, fontSize: 12 }} />
+                <YAxis tick={{ fill: axisColor, fontSize: 12 }} />
+                <Tooltip contentStyle={tipStyle} />
+                <Line
+                  type="monotone"
+                  dataKey="interactions"
+                  stroke="#2563eb"
+                  strokeWidth={3}
+                  dot={{ r: 4 }}
+                  activeDot={{ r: 6 }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ThemedCard>
+
+          {/* Recent Activity */}
+          <ThemedCard className="p-5">
+            <h2 className={`font-semibold mb-6 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>Recent Activity</h2>
+
+            <div className="space-y-4">
+              {recentEvents.length > 0 ? recentEvents.map((e, i) => (
+                <div
+                  key={i}
+                  className={`flex flex-col gap-1 pb-3 ${i !== recentEvents.length - 1 ? (isDark ? 'border-b border-white/10' : 'border-b border-gray-100') : ''}`}
+                >
+                  <div className="flex justify-between items-start">
+                    <p className={`font-medium text-sm capitalize ${isDark ? 'text-blue-300' : 'text-blue-700'}`}>{e.event_type.replace('_', ' ')}</p>
+                    <span className={`text-xs ${isDark ? 'text-white/40' : 'text-gray-400'}`}>
+                      {new Date(e.occurred_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className={`text-xs truncate ${isDark ? 'text-white/60' : 'text-gray-500'}`}>
+                    {e.page_url}
+                  </p>
+                </div>
+              )) : (
+                <p className={`text-sm ${isDark ? 'text-white/40' : 'text-gray-500'}`}>No recent interactions found.</p>
+              )}
+            </div>
+          </ThemedCard>
+        </div>
+
       </div>
-
-    </div>
-  );
-}
-
-function StatCard({
-  title,
-  value,
-}: {
-  title: string;
-  value: number;
-}) {
-  return (
-    <div className="bg-white p-5 rounded-xl shadow">
-      <p className="text-gray-500 text-sm">{title}</p>
-      <h3 className="text-2xl font-bold mt-1">
-        {value.toLocaleString()}
-      </h3>
     </div>
   );
 }

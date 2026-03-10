@@ -47,7 +47,7 @@ const ThemeToggle: React.FC = () => {
           `}
         >
           {isLight ? (
-            <span className="text-yellow-500 text-[9px] leading-none">☀️</span>
+            <span className="text-amber-300 text-[9px] leading-none font-bold" style={{ letterSpacing: '-1px' }}>◈</span>
           ) : (
             <span className="text-blue-300 text-[9px] leading-none">🌙</span>
           )}
