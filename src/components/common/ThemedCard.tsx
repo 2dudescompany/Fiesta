@@ -84,12 +84,12 @@ export function ThemedStatCard({
                 <>
                     <p
                         className={`text-3xl font-semibold tracking-tight mt-2 ${accent
-                                ? isDark
-                                    ? "text-blue-300 drop-shadow-[0_0_6px_rgba(59,130,246,0.35)]"
-                                    : "text-blue-600"
-                                : isDark
-                                    ? "text-white"
-                                    : "text-gray-900"
+                            ? isDark
+                                ? "text-blue-300 drop-shadow-[0_0_6px_rgba(59,130,246,0.35)]"
+                                : "text-blue-600"
+                            : isDark
+                                ? "text-white"
+                                : "text-gray-900"
                             }`}
                     >
                         {value}

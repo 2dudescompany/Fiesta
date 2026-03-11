@@ -21,8 +21,6 @@ interface ChatbotWidgetProps {
 
 
 const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
-  rasaServerUrl = import.meta.env.VITE_RASA_SERVER_URL || 'http://localhost:5005',
-  userId,
   chatbotKey,
   position = 'bottom-right',
   primaryColor = '#3B82F6',
@@ -58,9 +56,10 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
     }
   }, [isOpen]);
 
-  const sendMessage = async (text: string) => {
-    console.log("Chatbot key:", chatbotKey);
+  const fallbackAnswer =
+    "I'm sorry, I don't have a specific answer for that. Please try rephrasing your question, or contact our support team for assistance.";
 
+  const sendMessage = async (text: string) => {
     if (!text.trim()) return;
 
     const userMessage: Message = {
@@ -78,23 +77,35 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
     await new Promise((resolve) => setTimeout(resolve, 400));
 
     try {
-      const faqResponse = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
-          },
-          body: JSON.stringify({
-            question: text.trim(),
-            chatbot_key: chatbotKey,
-          }),
-        }
-      );
+      const faqUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`;
 
-      const faqData = await faqResponse.json();
+      const faqResponse = await fetch(faqUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          question: text.trim(),
+          chatbot_key: chatbotKey,
+        }),
+      });
+
+      // Always read the raw body first for debugging
+      const rawText = await faqResponse.text();
+      let faqData: any = {};
+      try {
+        faqData = JSON.parse(rawText);
+      } catch {
+        console.error("FAQ function returned non-JSON:", rawText);
+      }
+
+      if (!faqResponse.ok) {
+        console.error(`FAQ function HTTP ${faqResponse.status}:`, faqData);
+      } else {
+        console.log("FAQ response:", faqData);
+      }
 
       if (faqData?.answer) {
         const botMessage: Message = {
@@ -103,17 +114,15 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
           sender: "bot",
           timestamp: new Date(),
         };
-
         setMessages((prev) => [...prev, botMessage]);
       } else {
         const botMessage: Message = {
           id: (Date.now() + 1).toString(),
-          text: "Sorry, I don't have an answer for that yet.",
+          text: fallbackAnswer,
           sender: "bot",
           timestamp: new Date(),
           quickReplies: ["Help", "Browse Products"],
         };
-
         setMessages((prev) => [...prev, botMessage]);
       }
     } catch (error) {
@@ -125,12 +134,12 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         sender: "bot",
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
+
   };
 
 
@@ -251,8 +260,8 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                     <div className="flex flex-col max-w-[85%]">
                       <div
                         className={`rounded-2xl px-4 py-3 shadow-sm ${message.sender === 'user'
-                            ? 'bg-blue-600 text-white rounded-br-sm'
-                            : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm'
+                          ? 'bg-blue-600 text-white rounded-br-sm'
+                          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm'
                           }`}
                         style={
                           message.sender === 'user'
@@ -357,9 +366,6 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                     onChange={(e) => setInputValue(e.target.value)}
                     placeholder="Type your message..."
                     className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
-                    style={{
-                      focusRingColor: primaryColor,
-                    }}
                     onFocus={(e) => {
                       e.target.style.borderColor = primaryColor;
                       e.target.style.boxShadow = `0 0 0 3px ${primaryColor}20`;

@@ -207,7 +207,7 @@ export default function Business() {
                     ].join(" ")}
                   >
                     <option value="" disabled className={isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}>Select industry…</option>
-                    {["E-Commerce","Healthcare","Education","Finance & Banking","Real Estate","Technology","Hospitality & Travel","Other"].map(ind => (
+                    {["E-Commerce", "Healthcare", "Education", "Finance & Banking", "Real Estate", "Technology", "Hospitality & Travel", "Other"].map(ind => (
                       <option key={ind} value={ind} className={isDark ? "bg-gray-900 text-white" : "bg-white text-gray-900"}>{ind}</option>
                     ))}
                   </select>
@@ -429,7 +429,7 @@ function FaqItem({ faq, isDark, glassInput, refreshFaqs, onSuccess }: any) {
     onSuccess("FAQ deleted.", "error");
   };
 
-  const cardBase    = isDark ? "bg-gray-900/80 border border-white/10" : "bg-white border border-gray-200";
+  const cardBase = isDark ? "bg-gray-900/80 border border-white/10" : "bg-white border border-gray-200";
   const revealStrip = isDark ? "bg-gray-800/90" : "bg-gray-100";
 
   if (editing) {

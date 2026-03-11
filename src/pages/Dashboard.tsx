@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import Sidebar from "../components/Dashboard/Sidebar";
 import DashboardHome from "../components/Dashboard/DashboardHome";
@@ -14,24 +14,37 @@ import ChatbotWidget from "../components/Chatbot/ChatbotWidget";
 
 import { useDictationCapture } from "../hooks/useDictationCapture";
 import { useAuth } from "../contexts/AuthContext";
+import { supabase } from "../lib/supabase";
 import { injectUAT } from "../lib/uatEmbed";
 
 export default function Dashboard() {
   useDictationCapture();
 
   const { user, loading } = useAuth();
+  const [chatbotKey, setChatbotKey] = useState("");
 
   /* ---------- Shortcut UAT: inject tracker for dashboard owner ---------- */
   useEffect(() => {
     if (user) injectUAT();
   }, [user]);
 
+  /* ---------- Load chatbot_key from Supabase ---------- */
+  useEffect(() => {
+    if (!user) return;
+    supabase
+      .from("businesses")
+      .select("chatbot_key")
+      .eq("user_id", user.id)
+      .single()
+      .then(({ data }) => {
+        if (data?.chatbot_key) setChatbotKey(data.chatbot_key);
+      });
+  }, [user]);
+
   /* ---------- Load saved widget config ---------- */
   const getChatbotConfig = () => {
     const saved = localStorage.getItem("chatbot_config");
-
     if (!saved) return null;
-
     try {
       return JSON.parse(saved);
     } catch {
@@ -91,12 +104,14 @@ export default function Dashboard() {
       </main>
 
       {/* ---------- Chatbot Widget ---------- */}
-      <ChatbotWidget
-        userId={user.id}
-        position={chatbotConfig?.position || "bottom-right"}
-        primaryColor={chatbotConfig?.primaryColor || "#3B82F6"}
-        chatbotKey=""
-      />
+      {chatbotKey && (
+        <ChatbotWidget
+          userId={user.id}
+          position={chatbotConfig?.position || "bottom-right"}
+          primaryColor={chatbotConfig?.primaryColor || "#3B82F6"}
+          chatbotKey={chatbotKey}
+        />
+      )}
     </div>
   );
 }

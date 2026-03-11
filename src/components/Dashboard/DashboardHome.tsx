@@ -27,6 +27,7 @@ export default function DashboardHome() {
   const [activeUsers, setActiveUsers] = useState(0);
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
+  const [sliderDays, setSliderDays] = useState(7);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -41,10 +42,14 @@ export default function DashboardHome() {
     setNameGlow(true);
     setTimeout(() => setNameGlow(false), 2000);
 
-    loadDashboard();
+    loadDashboard(sliderDays);
   }, []);
 
-  async function loadDashboard() {
+  useEffect(() => {
+    loadDashboard(sliderDays);
+  }, [sliderDays]);
+
+  async function loadDashboard(days: number = 7) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -134,26 +139,26 @@ export default function DashboardHome() {
     setActiveUsers(uniqueUsers.size);
 
     /* -------------------------
-       WEEKLY SERVICE USAGE (rolling 7-day window)
+       WEEKLY SERVICE USAGE (rolling N-day window)
     ------------------------- */
     const today = new Date();
-    const last7Days = new Date();
-    last7Days.setDate(today.getDate() - 6);
-    last7Days.setHours(0, 0, 0, 0);
+    const windowStart = new Date();
+    windowStart.setDate(today.getDate() - (days - 1));
+    windowStart.setHours(0, 0, 0, 0);
 
     const { data: weeklyEvents } = await supabase
       .from("uat_events")
       .select("occurred_at")
       .eq("client_id", cid)
-      .gte("occurred_at", last7Days.toISOString());
+      .gte("occurred_at", windowStart.toISOString());
 
-    // Build an ordered list of the last 7 dates as "MMM D" labels
+    // Build an ordered list of the last N dates as "MMM D" labels
     const rollingDays: { label: string; dateStr: string }[] = [];
-    for (let i = 6; i >= 0; i--) {
+    for (let i = days - 1; i >= 0; i--) {
       const d = new Date();
       d.setDate(today.getDate() - i);
       const label = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      const dateStr = d.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const dateStr = d.toISOString().slice(0, 10);
       rollingDays.push({ label, dateStr });
     }
 
@@ -221,14 +226,39 @@ export default function DashboardHome() {
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Weekly Usage */}
           <ThemedCard className="p-5 lg:col-span-2">
-            <h2 className={`font-semibold mb-6 ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
-              Weekly Service Usage
-            </h2>
+            {/* Header + slider */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-5">
+              <h2 className={`font-semibold ${isDark ? 'text-white/80' : 'text-gray-700'}`}>
+                Service Usage —{" "}
+                <span className={`font-bold ${isDark ? 'text-blue-300' : 'text-blue-600'}`}>
+                  Last {sliderDays} day{sliderDays !== 1 ? 's' : ''}
+                </span>
+              </h2>
 
-            <ResponsiveContainer width="100%" height={300}>
+              <div className="flex items-center gap-3 min-w-[180px]">
+                <span className={`text-xs shrink-0 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>7d</span>
+                <input
+                  type="range"
+                  min={7}
+                  max={30}
+                  step={1}
+                  value={sliderDays}
+                  onChange={(e) => setSliderDays(Number(e.target.value))}
+                  className="flex-1 h-1.5 rounded-full accent-blue-500 cursor-pointer"
+                  style={{
+                    background: isDark
+                      ? `linear-gradient(to right, #3b82f6 ${((sliderDays - 7) / 23) * 100}%, #ffffff20 ${((sliderDays - 7) / 23) * 100}%)`
+                      : `linear-gradient(to right, #2563eb ${((sliderDays - 7) / 23) * 100}%, #e2e8f0 ${((sliderDays - 7) / 23) * 100}%)`,
+                  }}
+                />
+                <span className={`text-xs shrink-0 ${isDark ? 'text-white/40' : 'text-gray-400'}`}>30d</span>
+              </div>
+            </div>
+
+            <ResponsiveContainer width="100%" height={280}>
               <LineChart data={weeklyData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#ffffff15" : "#e2e8f0"} />
-                <XAxis dataKey="day" tick={{ fill: axisColor, fontSize: 12 }} />
+                <XAxis dataKey="day" tick={{ fill: axisColor, fontSize: sliderDays > 14 ? 10 : 12 }} />
                 <YAxis tick={{ fill: axisColor, fontSize: 12 }} />
                 <Tooltip contentStyle={tipStyle} />
                 <Line
@@ -236,7 +266,7 @@ export default function DashboardHome() {
                   dataKey="interactions"
                   stroke="#2563eb"
                   strokeWidth={3}
-                  dot={{ r: 4 }}
+                  dot={{ r: sliderDays > 14 ? 2 : 4 }}
                   activeDot={{ r: 6 }}
                 />
               </LineChart>
