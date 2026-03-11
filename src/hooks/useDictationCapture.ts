@@ -23,8 +23,9 @@ function extractText(target: EventTarget | null): string | null {
   const text = target.innerText?.trim();
   if (!text) return null;
 
-  // Avoid large paragraphs
-  if (text.length > 300 || text.split(" ").length > 40) return null;
+  // Avoid large paragraphs and very short strings
+  if (text.length > 300 || text.split(' ').length > 40) return null;
+  if (text.length < 3) return null;
 
   return text;
 }
@@ -45,14 +46,15 @@ export function useDictationCapture() {
 
       // cooldown 1.5 sec
       if (now - lastSpeakTime < 1500) return;
-
       if (text === lastSpokenText) return;
 
       lastSpeakTime = now;
       lastSpokenText = text;
 
-      window.speechSynthesis.cancel();
-      speakText(text);
+      // Detect language from page lang attribute (best-effort)
+      const lang = document.documentElement.lang?.slice(0, 2) || 'en';
+
+      speakText(text, lang);
 
       await logTtsUsage({
         userId: user.id,
@@ -62,29 +64,18 @@ export function useDictationCapture() {
     };
 
     const handleHover = (e: MouseEvent) => {
+      if (hoverTimeout) clearTimeout(hoverTimeout);
       hoverTimeout = window.setTimeout(async () => {
-      const text = extractText(e.target);
-      if (!text) return;
-
-    // Stop previous speech
-    window.speechSynthesis.cancel();
-
-    speakText(text);
-
-    await logTtsUsage({
-      userId: user.id,
-      triggerType: 'hover',
-      text,
-  });
-}, 500);
-
+        const text = extractText(e.target);
+        if (!text) return;
+        await speak(text, 'hover');
+      }, 500);
     };
 
     const handleClick = async (e: MouseEvent) => {
       const text = extractText(e.target);
       if (!text) return;
-
-      speak(text, 'click');
+      await speak(text, 'click');
     };
 
     document.addEventListener('mouseover', handleHover);
@@ -93,7 +84,6 @@ export function useDictationCapture() {
     return () => {
       document.removeEventListener('mouseover', handleHover);
       document.removeEventListener('click', handleClick);
-
       if (hoverTimeout) clearTimeout(hoverTimeout);
     };
   }, [isDictationEnabled, user]);
