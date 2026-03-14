@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Send, Minimize2, Maximize2, ShoppingCart, Package, HelpCircle, Search, CreditCard } from 'lucide-react';
+import { X, Send, Minimize2, Maximize2, ShoppingCart, Package, HelpCircle, Search, Mic, MicOff, Bot } from 'lucide-react';
 
+/* ─── Types ──────────────────────────────────────────────────────────── */
 interface Message {
   id: string;
   text: string;
@@ -9,311 +10,271 @@ interface Message {
   buttons?: Array<{ title: string; payload: string }>;
   image?: string;
   quickReplies?: string[];
+  source?: 'faq' | 'scraped';
 }
 
 interface ChatbotWidgetProps {
-  rasaServerUrl?: string;
-  userId?: string;
   chatbotKey: string;
+  businessName?: string;
   position?: 'bottom-right' | 'bottom-left';
   primaryColor?: string;
+  isDark?: boolean;
 }
 
+/* ─── Static launcher icon (no external asset needed) ────────────────── */
+const LauncherIcon = ({ color }: { color: string }) => (
+  <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ width: '100%', height: '100%' }}>
+    {/* Chat bubble body */}
+    <rect x="6" y="8" width="44" height="30" rx="8" fill="white" fillOpacity="0.95" />
+    {/* Bot eyes */}
+    <circle cx="20" cy="23" r="4" fill={color} />
+    <circle cx="36" cy="23" r="4" fill={color} />
+    <circle cx="21" cy="22" r="1.5" fill="white" />
+    <circle cx="37" cy="22" r="1.5" fill="white" />
+    {/* Smile */}
+    <path d="M20 29 Q28 34 36 29" stroke={color} strokeWidth="2.2" strokeLinecap="round" fill="none" />
+    {/* Tail */}
+    <path d="M16 38 L10 48 L26 38Z" fill="white" fillOpacity="0.95" />
+  </svg>
+);
 
+/* ─── Small bot avatar used in messages ─────────────────────────────── */
+const MsgAvatar = ({ color }: { color: string }) => (
+  <div
+    className="flex items-center justify-center rounded-full shrink-0"
+    style={{ width: 28, height: 28, background: `linear-gradient(135deg, ${color}dd, ${color}99)`, border: '1px solid rgba(255,255,255,0.3)' }}
+  >
+    <Bot style={{ width: 15, height: 15, color: 'white' }} />
+  </div>
+);
+
+/* ─── Main component ─────────────────────────────────────────────────── */
 const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
   chatbotKey,
+  businessName,
   position = 'bottom-right',
-  primaryColor = '#3B82F6',
+  primaryColor = '#6366f1',
+  isDark = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen]         = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      text: 'Hello! 👋 Welcome to our store! I\'m here to help you find products, track orders, and answer any questions. How can I assist you today?',
-      sender: 'bot',
-      timestamp: new Date(),
-      quickReplies: ['Browse Products', 'Track Order', 'View Cart', 'Help'],
-    },
-  ]);
+  const [messages, setMessages]     = useState<Message[]>([{
+    id: '1', sender: 'bot', timestamp: new Date(),
+    text: `Hello! 👋 I'm ${businessName ? `${businessName}'s` : 'your'} assistant. Ask me anything about products, orders, or services.`,
+    quickReplies: ['Products', 'Track Order', 'Help'],
+  }]);
   const [inputValue, setInputValue] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
+  const [isLoading, setIsLoading]   = useState(false);
+  const [isTyping, setIsTyping]     = useState(false);
+
+  // Voice state
+  const [listening, setListening]   = useState(false);
+  const mediaRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef       = useRef<HTMLInputElement>(null);
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
+  useEffect(() => { if (isOpen && inputRef.current) inputRef.current.focus(); }, [isOpen]);
 
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages, isTyping]);
+  const positionClasses = { 'bottom-right': 'bottom-5 right-5', 'bottom-left': 'bottom-5 left-5' };
+  const headerGrad = `linear-gradient(135deg, ${primaryColor}f2 0%, ${primaryColor}bb 100%)`;
+  const assistantTitle = businessName ? `${businessName}'s Assistant` : 'AI Assistant';
 
-  useEffect(() => {
-    if (isOpen && inputRef.current) {
-      inputRef.current.focus();
-    }
-  }, [isOpen]);
-
-  const fallbackAnswer =
-    "I'm sorry, I don't have a specific answer for that. Please try rephrasing your question, or contact our support team for assistance.";
-
+  /* ── Send message ── */
   const sendMessage = async (text: string) => {
     if (!text.trim()) return;
-
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      text: text.trim(),
-      sender: "user",
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue("");
+    setMessages(p => [...p, { id: Date.now().toString(), text: text.trim(), sender: 'user', timestamp: new Date() }]);
+    setInputValue('');
     setIsLoading(true);
     setIsTyping(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 400));
-
+    await new Promise(r => setTimeout(r, 380));
     try {
-      const faqUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`;
-
-      const faqResponse = await fetch(faqUrl, {
-        method: "POST",
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`, {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
           apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
           Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
         },
-        body: JSON.stringify({
-          question: text.trim(),
-          chatbot_key: chatbotKey,
-        }),
+        body: JSON.stringify({ question: text.trim(), chatbot_key: chatbotKey }),
       });
-
-      // Always read the raw body first for debugging
-      const rawText = await faqResponse.text();
-      let faqData: any = {};
-      try {
-        faqData = JSON.parse(rawText);
-      } catch {
-        console.error("FAQ function returned non-JSON:", rawText);
-      }
-
-      if (!faqResponse.ok) {
-        console.error(`FAQ function HTTP ${faqResponse.status}:`, faqData);
-      } else {
-        console.log("FAQ response:", faqData);
-      }
-
-      if (faqData?.answer) {
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: faqData.answer,
-          sender: "bot",
-          timestamp: new Date(),
-        };
-        setMessages((prev) => [...prev, botMessage]);
-      } else {
-        const botMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          text: fallbackAnswer,
-          sender: "bot",
-          timestamp: new Date(),
-          quickReplies: ["Help", "Browse Products"],
-        };
-        setMessages((prev) => [...prev, botMessage]);
-      }
-    } catch (error) {
-      console.error("FAQ request failed:", error);
-
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        text: "Sorry, something went wrong. Please try again.",
-        sender: "bot",
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
+      let data: any = {};
+      try { data = JSON.parse(await res.text()); } catch { /**/ }
+      setMessages(p => [...p, {
+        id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(),
+        source: data?.source,
+        text: data?.answer ?? "I'm sorry, I couldn't find an answer for that. Please try rephrasing or contact support.",
+        quickReplies: data?.answer ? undefined : ['Help', 'Browse Products'],
+      }]);
+    } catch {
+      setMessages(p => [...p, { id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(), text: 'Something went wrong. Please try again.' }]);
     } finally {
       setIsLoading(false);
       setIsTyping(false);
     }
-
   };
 
-
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    sendMessage(inputValue);
+  /* ── Groq voice recording ── */
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mr = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      chunksRef.current = [];
+      mr.ondataavailable = e => { if (e.data.size > 0) chunksRef.current.push(e.data); };
+      mr.onstop = async () => {
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(chunksRef.current, { type: 'audio/webm' });
+        await transcribeWithGroq(blob);
+      };
+      mr.start();
+      mediaRef.current = mr;
+      setListening(true);
+    } catch {
+      alert('Microphone access denied or not available.');
+    }
   };
 
-  const handleQuickReply = (reply: string) => {
-    sendMessage(reply);
+  const stopRecording = () => {
+    mediaRef.current?.stop();
+    mediaRef.current = null;
+    setListening(false);
   };
 
-  const handleButtonClick = (payload: string) => {
-    sendMessage(payload);
+  const transcribeWithGroq = async (blob: Blob) => {
+    setIsTyping(true);
+    try {
+      const form = new FormData();
+      form.append('audio', blob, 'audio.webm');
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`, {
+        method: 'POST',
+        headers: {
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: form,
+      });
+      const data = await res.json();
+      if (data.transcript) {
+        await sendMessage(data.transcript);
+      }
+    } catch {
+      setMessages(p => [...p, { id: Date.now().toString(), sender: 'bot', timestamp: new Date(), text: 'Voice transcription failed. Please type instead.' }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
-  const positionClasses = {
-    'bottom-right': 'bottom-4 right-4',
-    'bottom-left': 'bottom-4 left-4',
+  const handleMicClick = () => {
+    if (listening) stopRecording();
+    else startRecording();
   };
 
-  const getQuickActionIcon = (text: string) => {
-    const lowerText = text.toLowerCase();
-    if (lowerText.includes('cart') || lowerText.includes('cart')) return <ShoppingCart className="w-4 h-4" />;
-    if (lowerText.includes('order') || lowerText.includes('track')) return <Package className="w-4 h-4" />;
-    if (lowerText.includes('help')) return <HelpCircle className="w-4 h-4" />;
-    if (lowerText.includes('search') || lowerText.includes('product')) return <Search className="w-4 h-4" />;
-    if (lowerText.includes('payment') || lowerText.includes('checkout')) return <CreditCard className="w-4 h-4" />;
+  const getIcon = (text: string) => {
+    const t = text.toLowerCase();
+    if (t.includes('cart')) return <ShoppingCart className="w-3 h-3" />;
+    if (t.includes('order') || t.includes('track')) return <Package className="w-3 h-3" />;
+    if (t.includes('help')) return <HelpCircle className="w-3 h-3" />;
+    if (t.includes('product') || t.includes('browse')) return <Search className="w-3 h-3" />;
     return null;
   };
 
   return (
     <>
+      {/* ═══ LAUNCHER BUTTON — static SVG, only "jumps" on click via active: ═══ */}
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className={`fixed ${positionClasses[position]} w-16 h-16 rounded-full shadow-2xl flex items-center justify-center text-white transition-all hover:scale-110 hover:shadow-3xl z-50 animate-bounce`}
+          className={`fixed ${positionClasses[position]} w-16 h-16 rounded-full z-50 focus:outline-none group transition-shadow duration-300`}
           style={{
-            backgroundColor: primaryColor,
-            boxShadow: `0 10px 25px -5px ${primaryColor}40`,
+            background: headerGrad,
+            boxShadow: `0 8px 28px -4px ${primaryColor}70, 0 2px 8px rgba(0,0,0,0.15)`,
+            padding: 10,
+            // no animate-bounce; scale only on hover/active via CSS
           }}
-          aria-label="Open chatbot"
+          aria-label="Open chat"
         >
-          <svg
-            width="28"
-            height="28"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-          <span className="absolute -top-1 -right-1 w-4 h-4 bg-green-400 rounded-full border-2 border-white animate-pulse"></span>
+          <span className="block w-full h-full transition-transform duration-200 group-hover:scale-105 group-active:scale-90">
+            <LauncherIcon color={primaryColor} />
+          </span>
+          {/* Online pulse dot */}
+          <span className="absolute -bottom-0.5 -right-0.5 flex w-4 h-4">
+            <span className="absolute inset-0 rounded-full bg-emerald-400 animate-ping opacity-60" />
+            <span className="relative w-4 h-4 rounded-full bg-emerald-400 border-2 border-white" />
+          </span>
         </button>
       )}
 
+      {/* ═══ CHAT WINDOW ═══ */}
       {isOpen && (
         <div
-          className={`fixed ${positionClasses[position]} w-96 h-[600px] bg-white rounded-2xl shadow-2xl flex flex-col z-50 transition-all duration-300 ${isMinimized ? 'h-16' : ''
-            }`}
-          style={{
-            boxShadow: '0 20px 60px -12px rgba(0, 0, 0, 0.25)',
-          }}
+          className={`fixed ${positionClasses[position]} w-[375px] rounded-2xl z-50 flex flex-col overflow-hidden transition-all duration-300 ${isMinimized ? 'h-[62px]' : 'h-[572px]'}`}
+          style={{ boxShadow: '0 24px 80px -12px rgba(0,0,0,0.32), 0 4px 16px rgba(0,0,0,0.1)', background: '#fff' }}
         >
           {/* Header */}
-          <div
-            className="flex items-center justify-between p-4 rounded-t-2xl text-white"
-            style={{
-              backgroundColor: primaryColor,
-              background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
-            }}
-          >
-            <div className="flex items-center space-x-3">
-              <div className="relative">
-                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-                <div className="absolute inset-0 w-3 h-3 bg-green-400 rounded-full animate-ping opacity-75"></div>
+          <div className="flex items-center justify-between px-4 py-3 shrink-0" style={{ background: headerGrad }}>
+            <div className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 flex items-center justify-center"
+                style={{ background: 'rgba(255,255,255,0.15)', padding: 5, border: '2px solid rgba(255,255,255,0.3)' }}>
+                <LauncherIcon color="white" />
               </div>
               <div>
-                <h3 className="font-semibold text-lg">Shopping Assistant</h3>
-                <p className="text-xs opacity-90">Online now</p>
+                <p className="text-white font-semibold text-sm leading-tight">{assistantTitle}</p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="relative flex w-1.5 h-1.5">
+                    <span className="absolute inset-0 rounded-full bg-emerald-300 animate-ping opacity-75" />
+                    <span className="relative w-1.5 h-1.5 rounded-full bg-emerald-300" />
+                  </span>
+                  <span className="text-white/75 text-[11px]">Online · Instant replies</span>
+                </div>
               </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setIsMinimized(!isMinimized)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-all duration-200 hover:scale-110"
-                aria-label={isMinimized ? 'Maximize' : 'Minimize'}
-              >
-                {isMinimized ? (
-                  <Maximize2 className="w-5 h-5" />
-                ) : (
-                  <Minimize2 className="w-5 h-5" />
-                )}
+            <div className="flex items-center gap-1">
+              <button onClick={() => setIsMinimized(v => !v)}
+                className="p-2 rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition"
+                aria-label={isMinimized ? 'Expand' : 'Minimise'}>
+                {isMinimized ? <Maximize2 className="w-4 h-4" /> : <Minimize2 className="w-4 h-4" />}
               </button>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-2 hover:bg-white/20 rounded-lg transition-all duration-200 hover:scale-110"
-                aria-label="Close chatbot"
-              >
-                <X className="w-5 h-5" />
+              <button onClick={() => setIsOpen(false)}
+                className="p-2 rounded-lg hover:bg-white/15 text-white/80 hover:text-white transition"
+                aria-label="Close">
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
 
+          {/* Body */}
           {!isMinimized && (
             <>
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gradient-to-b from-gray-50 to-white">
-                {messages.map((message) => (
-                  <div
-                    key={message.id}
-                    className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
-                  >
-                    <div className="flex flex-col max-w-[85%]">
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3"
+                style={{ background: 'linear-gradient(180deg, #f6f8ff 0%, #ffffff 100%)' }}>
+                {messages.map((msg) => (
+                  <div key={msg.id} className={`flex items-end gap-2 animate-fade-in ${msg.sender === 'user' ? 'flex-row-reverse' : ''}`}>
+                    {msg.sender === 'bot' && <MsgAvatar color={primaryColor} />}
+                    <div className="flex flex-col max-w-[78%]">
                       <div
-                        className={`rounded-2xl px-4 py-3 shadow-sm ${message.sender === 'user'
-                          ? 'bg-blue-600 text-white rounded-br-sm'
-                          : 'bg-white text-gray-800 border border-gray-200 rounded-bl-sm'
-                          }`}
-                        style={
-                          message.sender === 'user'
-                            ? {
-                              background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
-                            }
-                            : {}
-                        }
+                        className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm ${msg.sender === 'user' ? 'text-white rounded-br-sm' : 'bg-white text-gray-800 border border-gray-100 rounded-bl-sm'}`}
+                        style={msg.sender === 'user' ? { background: headerGrad } : {}}
                       >
-                        {message.image && (
-                          <img
-                            src={message.image}
-                            alt="Product"
-                            className="rounded-lg mb-2 max-w-full h-auto"
-                          />
+                        {msg.image && <img src={msg.image} alt="" className="rounded-lg mb-2 max-w-full" />}
+                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                        {msg.source === 'scraped' && (
+                          <span className="inline-flex items-center gap-1 mt-1.5 text-[10px] text-indigo-400 font-medium">
+                            <Bot className="w-2.5 h-2.5" /> From website
+                          </span>
                         )}
-                        <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.text}</p>
-                        <span className={`text-xs mt-1.5 block ${message.sender === 'user' ? 'text-blue-100' : 'text-gray-500'}`}>
-                          {message.timestamp.toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
+                        <span className={`text-[10px] mt-1 block ${msg.sender === 'user' ? 'text-white/60' : 'text-gray-400'}`}>
+                          {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-
-                      {/* Quick Replies */}
-                      {message.quickReplies && message.sender === 'bot' && (
-                        <div className="flex flex-wrap gap-2 mt-2">
-                          {message.quickReplies.map((reply, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => handleQuickReply(reply)}
-                              className="px-3 py-1.5 text-xs bg-white border border-gray-300 rounded-full hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 flex items-center gap-1.5 shadow-sm"
-                            >
-                              {getQuickActionIcon(reply)}
-                              {reply}
-                            </button>
-                          ))}
-                        </div>
-                      )}
-
-                      {/* Buttons */}
-                      {message.buttons && message.sender === 'bot' && (
-                        <div className="flex flex-col gap-2 mt-2">
-                          {message.buttons.map((button, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => handleButtonClick(button.payload)}
-                              className="px-4 py-2 text-sm bg-white border-2 rounded-lg hover:bg-gray-50 transition-all duration-200 text-left shadow-sm hover:shadow-md"
-                              style={{ borderColor: primaryColor, color: primaryColor }}
-                            >
-                              {button.title}
+                      {msg.quickReplies && msg.sender === 'bot' && (
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {msg.quickReplies.map((r, i) => (
+                            <button key={i} onClick={() => sendMessage(r)}
+                              className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium rounded-full border border-gray-200 bg-white hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm">
+                              {getIcon(r)}{r}
                             </button>
                           ))}
                         </div>
@@ -322,77 +283,81 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                   </div>
                 ))}
 
-                {/* Typing Indicator */}
+                {/* Typing indicator */}
                 {isTyping && (
-                  <div className="flex justify-start animate-fade-in">
-                    <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
-                      <div className="flex space-x-1.5">
-                        <div
-                          className="w-2 h-2 rounded-full animate-bounce"
-                          style={{
-                            backgroundColor: primaryColor,
-                            animationDelay: '0ms',
-                          }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 rounded-full animate-bounce"
-                          style={{
-                            backgroundColor: primaryColor,
-                            animationDelay: '150ms',
-                          }}
-                        ></div>
-                        <div
-                          className="w-2 h-2 rounded-full animate-bounce"
-                          style={{
-                            backgroundColor: primaryColor,
-                            animationDelay: '300ms',
-                          }}
-                        ></div>
+                  <div className="flex items-end gap-2 animate-fade-in">
+                    <MsgAvatar color={primaryColor} />
+                    <div className="bg-white border border-gray-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+                      <div className="flex space-x-1">
+                        {[0, 160, 320].map(d => (
+                          <div key={d} className="w-2 h-2 rounded-full animate-bounce"
+                            style={{ backgroundColor: primaryColor, animationDelay: `${d}ms` }} />
+                        ))}
                       </div>
                     </div>
                   </div>
                 )}
-
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
-              <form onSubmit={handleSubmit} className="p-4 border-t border-gray-200 bg-white rounded-b-2xl">
-                <div className="flex space-x-2">
+              {/* ── Input bar ── */}
+              <div className="shrink-0 border-t border-gray-100 bg-white px-3 py-3">
+                {/* Listening banner */}
+                {listening && (
+                  <div className="flex items-center gap-2 mb-2 px-3 py-2 rounded-xl text-xs font-medium text-white animate-pulse"
+                    style={{ background: headerGrad }}>
+                    <MicOff className="w-3.5 h-3.5" />
+                    Listening… tap mic again to stop
+                  </div>
+                )}
+                <form
+                  onSubmit={e => { e.preventDefault(); sendMessage(inputValue); }}
+                  className="flex gap-2"
+                >
+                  {/* Mic button */}
+                  <button
+                    type="button"
+                    onClick={handleMicClick}
+                    className="p-2.5 rounded-xl transition-all duration-200 shrink-0"
+                    style={{
+                      background: listening ? `${primaryColor}dd` : '#f1f5f9',
+                      color: listening ? 'white' : '#64748b',
+                      boxShadow: listening ? `0 2px 12px ${primaryColor}55` : 'none',
+                    }}
+                    aria-label={listening ? 'Stop recording' : 'Start recording'}
+                    title="Voice input (Groq Whisper)"
+                  >
+                    {listening
+                      ? <MicOff className="w-4 h-4" />
+                      : <Mic className="w-4 h-4" />}
+                  </button>
+
                   <input
                     ref={inputRef}
                     type="text"
                     value={inputValue}
-                    onChange={(e) => setInputValue(e.target.value)}
-                    placeholder="Type your message..."
-                    className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:border-transparent transition-all duration-200"
-                    onFocus={(e) => {
-                      e.target.style.borderColor = primaryColor;
-                      e.target.style.boxShadow = `0 0 0 3px ${primaryColor}20`;
-                    }}
-                    onBlur={(e) => {
-                      e.target.style.borderColor = '';
-                      e.target.style.boxShadow = '';
-                    }}
-                    disabled={isLoading}
+                    onChange={e => setInputValue(e.target.value)}
+                    placeholder={listening ? 'Listening…' : 'Ask me anything…'}
+                    disabled={isLoading || listening}
+                    className="flex-1 px-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-sm focus:outline-none focus:bg-white transition-all"
+                    onFocus={e => { e.target.style.borderColor = primaryColor; }}
+                    onBlur={e => { e.target.style.borderColor = ''; }}
                   />
+
                   <button
                     type="submit"
-                    disabled={isLoading || !inputValue.trim()}
-                    className="p-3 rounded-xl text-white transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed hover:scale-110 active:scale-95 shadow-lg"
-                    style={{
-                      backgroundColor: primaryColor,
-                      background: `linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%)`,
-                    }}
-                    aria-label="Send message"
+                    disabled={isLoading || !inputValue.trim() || listening}
+                    className="p-2.5 rounded-xl text-white transition-all disabled:opacity-40 hover:scale-105 active:scale-95"
+                    style={{ background: headerGrad, boxShadow: `0 4px 12px ${primaryColor}44` }}
+                    aria-label="Send"
                   >
-                    <Send className="w-5 h-5" />
+                    <Send className="w-4 h-4" />
                   </button>
-                </div>
-                <p className="text-xs text-gray-400 mt-2 text-center">
-                  Powered by AI • Secure & Private
+                </form>
+                <p className="text-[10px] text-gray-300 text-center mt-2 tracking-wide">
+                  Powered by HAVY · Secure &amp; Private
                 </p>
-              </form>
+              </div>
             </>
           )}
         </div>
@@ -400,18 +365,10 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
 
       <style>{`
         @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(10px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in {
-          animation: fade-in 0.3s ease-out;
-        }
+        .animate-fade-in { animation: fade-in 0.22s ease-out both; }
       `}</style>
     </>
   );

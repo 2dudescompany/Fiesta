@@ -22,22 +22,24 @@ export default function Dashboard() {
 
   const { user, loading } = useAuth();
   const [chatbotKey, setChatbotKey] = useState("");
+  const [businessName, setBusinessName] = useState("");
 
   /* ---------- Shortcut UAT: inject tracker for dashboard owner ---------- */
   useEffect(() => {
     if (user) injectUAT();
   }, [user]);
 
-  /* ---------- Load chatbot_key from Supabase ---------- */
+  /* ---------- Load chatbot_key + business name from Supabase ---------- */
   useEffect(() => {
     if (!user) return;
     supabase
       .from("businesses")
-      .select("chatbot_key")
+      .select("chatbot_key, name")
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
         if (data?.chatbot_key) setChatbotKey(data.chatbot_key);
+        if (data?.name) setBusinessName(data.name);
       });
   }, [user]);
 
@@ -106,10 +108,10 @@ export default function Dashboard() {
       {/* ---------- Chatbot Widget ---------- */}
       {chatbotKey && (
         <ChatbotWidget
-          userId={user.id}
+          chatbotKey={chatbotKey}
+          businessName={businessName}
           position={chatbotConfig?.position || "bottom-right"}
           primaryColor={chatbotConfig?.primaryColor || "#3B82F6"}
-          chatbotKey={chatbotKey}
         />
       )}
     </div>

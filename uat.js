@@ -109,10 +109,12 @@
 
   /* ================= EVENTS ================= */
 
+  // ── Regular click ──────────────────────────────────────────────
   document.addEventListener("click", (e) => {
     enqueue("click", e.target);
   });
 
+  // ── Hover ──────────────────────────────────────────────────────
   let hoverTimer = null;
   let current = null;
 
@@ -126,6 +128,53 @@
         enqueue("hover", e.target);
       }
     }, HOVER_DELAY);
+  });
+
+  // ── Rage click detector ────────────────────────────────────────
+  // A rage click is 3+ rapid clicks on the same element within 600ms.
+  const RAGE_WINDOW_MS  = 600;   // time window to count clicks in
+  const RAGE_THRESHOLD  = 3;     // minimum clicks to trigger rage
+
+  let rageTarget   = null;   // DOM element being tracked
+  let rageClicks   = 0;      // click count in current window
+  let rageTimer    = null;   // resets the window
+
+  document.addEventListener("click", (e) => {
+    const meaningful = findMeaningfulElement(e.target);
+    if (!meaningful) return;
+
+    if (meaningful === rageTarget) {
+      // Same element — increment counter
+      rageClicks++;
+
+      if (rageClicks >= RAGE_THRESHOLD) {
+        // Fire rage_click once per burst (then reset so we don't spam)
+        enqueue("rage_click", meaningful);
+        rageClicks   = 0;
+        rageTarget   = null;
+        clearTimeout(rageTimer);
+      }
+    } else {
+      // Different element — start fresh window
+      rageTarget = meaningful;
+      rageClicks = 1;
+      clearTimeout(rageTimer);
+    }
+
+    // Clear the rage window after RAGE_WINDOW_MS of inactivity on this element
+    clearTimeout(rageTimer);
+    rageTimer = setTimeout(() => {
+      rageTarget = null;
+      rageClicks = 0;
+    }, RAGE_WINDOW_MS);
+  }, true); // capture phase so it runs before other handlers
+
+  // ── Focus (form engagement) ────────────────────────────────────
+  document.addEventListener("focusin", (e) => {
+    const tag = e.target?.tagName?.toLowerCase();
+    if (tag === "input" || tag === "textarea" || tag === "select") {
+      enqueue("focus", e.target);
+    }
   });
 
 })();
