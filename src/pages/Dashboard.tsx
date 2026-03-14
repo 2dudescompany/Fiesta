@@ -105,13 +105,13 @@ export default function Dashboard() {
         </Routes>
       </main>
 
-      {/* ---------- Chatbot Widget ---------- */}
-      {chatbotKey && (
+      {/* ---------- Chatbot Widget — renders as soon as user is known ---------- */}
+      {user && (
         <ChatbotWidget
           chatbotKey={chatbotKey}
           businessName={businessName}
           position={chatbotConfig?.position || "bottom-right"}
-          primaryColor={chatbotConfig?.primaryColor || "#3B82F6"}
+          primaryColor={chatbotConfig?.primaryColor || "#6366f1"}
         />
       )}
     </div>

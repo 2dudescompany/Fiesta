@@ -8,57 +8,57 @@ const Integrations: React.FC = () => {
 
   const getChatbotSnippet = () => {
     const saved = localStorage.getItem('chatbot_config');
-    let config = {
-      rasaServerUrl: import.meta.env.VITE_RASA_SERVER_URL || 'http://localhost:5005',
-      position: 'bottom-right',
-      primaryColor: '#3B82F6'
-    };
-    
+    let cfg = { position: 'bottom-right', primaryColor: '#6366f1' };
     if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        config = { ...config, ...parsed };
-      } catch (e) {
-        // Use defaults
-      }
+      try { cfg = { ...cfg, ...JSON.parse(saved) }; } catch { /**/ }
     }
-
-    return `<!-- HAVY Rasa Chatbot Widget -->
-<div id="havy-chatbot-root"></div>
+    const origin = window.location.origin;
+    return `<!-- HAVY Chatbot + UAT Widget -->
 <script>
-  (function() {
-    window.HAVYChatbotConfig = {
-      chatbotKey: '${user?.chatbot_key}'
-      userId: '${user?.id || 'user'}',
-      position: '${config.position}',
-      primaryColor: '${config.primaryColor}'
-    };
-    var script = document.createElement('script');
-    script.src = '${window.location.origin}/chatbot-widget.js';
-    script.async = true;
-    document.head.appendChild(script);
-  })();
+(function(){
+  window.HAVYChatbotConfig = {
+    chatbotKey: 'YOUR_CHATBOT_KEY',
+    businessName: 'Your Business Name',
+    position: '${cfg.position}',
+    primaryColor: '${cfg.primaryColor}',
+    havyOrigin: '${origin}',
+    supabaseUrl: '${import.meta.env.VITE_SUPABASE_URL}',
+    anonKey: '${import.meta.env.VITE_SUPABASE_ANON_KEY}',
+  };
+  window.HAVY_CLIENT_ID = '${user?.id || 'YOUR_BUSINESS_ID'}';
+  window.HAVY_SUPABASE_URL = '${import.meta.env.VITE_SUPABASE_URL}';
+  window.HAVY_SUPABASE_ANON_KEY = '${import.meta.env.VITE_SUPABASE_ANON_KEY}';
+
+  // Load chatbot widget
+  var s = document.createElement('script');
+  s.src = '${origin}/chatbot-widget.js'; s.defer = true;
+  document.head.appendChild(s);
+
+  // Load UAT tracking
+  var u = document.createElement('script');
+  u.src = '${origin}/uat.js'; u.defer = true;
+  document.head.appendChild(u);
+})();
 </script>`;
   };
 
   const embedCodes = [
     {
       id: 'chatbot',
-      title: 'Rasa Chatbot',
-      description: 'Add a Rasa-powered intelligent chatbot to your website',
+      title: 'HAVY AI Chatbot',
+      description: 'Add an FAQ-powered AI chatbot with voice input to your website',
       code: getChatbotSnippet(),
       icon: MessageSquare,
       settings: {
-        'Rasa Server URL': import.meta.env.VITE_RASA_SERVER_URL || 'http://localhost:5005',
         position: 'bottom-right',
-        primaryColor: '#3B82F6'
-      }
+        primaryColor: '#6366f1',
+      },
     },
     {
       id: 'email',
       title: 'Email Auto-Responder',
       description: 'Automatic email responses for your contact forms',
-      code: `<!-- AI Services Pro Email Integration -->
+      code: `<!-- HAVY Email Integration -->
 <script>
   window.AISPEmail = {
     apiKey: 'your-api-key-here',
@@ -72,14 +72,14 @@ const Integrations: React.FC = () => {
       settings: {
         autoRespond: true,
         language: 'en',
-        responseTime: 'instant'
-      }
+        responseTime: 'instant',
+      },
     },
     {
       id: 'tts',
       title: 'Text-to-Speech',
       description: 'Convert your content to natural speech',
-      code: `<!-- AI Services Pro TTS -->
+      code: `<!-- HAVY TTS -->
 <script>
   window.AISPTTS = {
     apiKey: 'your-api-key-here',
@@ -94,9 +94,9 @@ const Integrations: React.FC = () => {
       settings: {
         voice: 'natural',
         speed: 1.0,
-        autoDetect: true
-      }
-    }
+        autoDetect: true,
+      },
+    },
   ];
 
   const copyToClipboard = (code: string, id: string) => {
@@ -110,7 +110,7 @@ const Integrations: React.FC = () => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Integrations</h1>
-          <p className="text-gray-600">Embed AI services into your website with simple code snippets</p>
+          <p className="text-gray-600">Embed HAVY services into your website with simple code snippets</p>
         </div>
       </div>
 
@@ -119,8 +119,8 @@ const Integrations: React.FC = () => {
           <div key={embed.id} className="card">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <embed.icon className="w-5 h-5 text-blue-600" />
+                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                  <embed.icon className="w-5 h-5 text-indigo-600" />
                 </div>
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{embed.title}</h3>
@@ -132,21 +132,15 @@ const Integrations: React.FC = () => {
                 className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
               >
                 {copiedCode === embed.id ? (
-                  <>
-                    <Check className="w-4 h-4 text-green-600" />
-                    <span className="text-green-600">Copied!</span>
-                  </>
+                  <><Check className="w-4 h-4 text-green-600" /><span className="text-green-600">Copied!</span></>
                 ) : (
-                  <>
-                    <Copy className="w-4 h-4" />
-                    <span>Copy Code</span>
-                  </>
+                  <><Copy className="w-4 h-4" /><span>Copy Code</span></>
                 )}
               </button>
             </div>
 
             <div className="bg-gray-900 rounded-lg p-4 mb-4">
-              <pre className="text-green-400 text-sm overflow-x-auto">
+              <pre className="text-green-400 text-sm overflow-x-auto whitespace-pre-wrap">
                 <code>{embed.code}</code>
               </pre>
             </div>
@@ -163,7 +157,7 @@ const Integrations: React.FC = () => {
                       type={typeof value === 'boolean' ? 'checkbox' : 'text'}
                       defaultChecked={typeof value === 'boolean' ? value : undefined}
                       defaultValue={typeof value !== 'boolean' ? String(value) : undefined}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-200 focus:border-blue-500"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-200 focus:border-indigo-500"
                     />
                   </div>
                 ))}
@@ -173,13 +167,13 @@ const Integrations: React.FC = () => {
         ))}
       </div>
 
-      <div className="card bg-blue-50 border border-blue-200">
-        <h3 className="text-lg font-semibold text-blue-900 mb-2">Integration Guide</h3>
-        <div className="space-y-2 text-blue-800">
-          <p>1. Replace <code className="bg-blue-100 px-2 py-1 rounded">your-api-key-here</code> with your actual API key</p>
-          <p>2. Customize the configuration options as needed</p>
-          <p>3. Add the code snippet to your website's HTML</p>
-          <p>4. Test the integration and monitor usage in your dashboard</p>
+      <div className="card bg-indigo-50 border border-indigo-200">
+        <h3 className="text-lg font-semibold text-indigo-900 mb-2">Quick Setup Guide</h3>
+        <div className="space-y-2 text-indigo-800 text-sm">
+          <p>1. Copy the chatbot snippet above and paste it into your website's <code className="bg-indigo-100 px-1 py-0.5 rounded">&lt;head&gt;</code></p>
+          <p>2. Replace <code className="bg-indigo-100 px-1 py-0.5 rounded">YOUR_CHATBOT_KEY</code> with the key from your <strong>Chatbot Config</strong> page</p>
+          <p>3. Replace <code className="bg-indigo-100 px-1 py-0.5 rounded">Your Business Name</code> with your actual business name</p>
+          <p>4. The chatbot icon and FAQ answers load automatically — no other setup needed</p>
         </div>
       </div>
     </div>
