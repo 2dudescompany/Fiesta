@@ -11,12 +11,12 @@ import { supabase } from '../../lib/supabase';
 import DownloadReportButton from '../common/DownloadReportButton';
 import { useTimeTheme } from '../../hooks/useTimeTheme';
 
-interface StatCardProps { label: string; value: string | number; sub?: string; color?: string; }
-const StatCard: React.FC<StatCardProps> = ({ label, value, sub, color = '#6366f1' }) => (
-  <div className="p-4 rounded-xl border bg-white shadow-sm">
-    <p className="text-xs text-gray-500 font-medium uppercase tracking-wide">{label}</p>
+interface StatCardProps { label: string; value: string | number; sub?: string; color?: string; isDark?: boolean; }
+const StatCard: React.FC<StatCardProps> = ({ label, value, sub, color = '#6366f1', isDark }) => (
+  <div className="p-4 rounded-xl border shadow-sm" style={{ background: isDark ? 'rgba(255,255,255,0.05)' : 'white', borderColor: isDark ? 'rgba(255,255,255,0.1)' : '#e5e7eb' }}>
+    <p className="text-xs font-medium uppercase tracking-wide" style={{ color: isDark ? 'rgba(255,255,255,0.45)' : '#6b7280' }}>{label}</p>
     <p className="text-2xl font-bold mt-1" style={{ color }}>{value}</p>
-    {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+    {sub && <p className="text-xs mt-0.5" style={{ color: isDark ? 'rgba(255,255,255,0.3)' : '#9ca3af' }}>{sub}</p>}
   </div>
 );
 
@@ -239,14 +239,10 @@ const ChatbotConfig: React.FC = () => {
 
       {/* ── Chatbot Health KPIs ─────────────────────────────────────── */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <StatCard label="Total Questions" value={faqSummary.total} sub="all time" />
-        <StatCard label="FAQ Match Rate" value={`${matchRate}%`} color="#10b981"
-          sub={`${faqSummary.matched} matched`} />
-        <StatCard label="Dead Queries" value={deadQueries.length}
-          color={deadQueries.length > 3 ? '#ef4444' : '#f59e0b'}
-          sub="no answer found" />
-        <StatCard label="Avg Similarity" value={avgScore !== null ? avgScore.toFixed(2) : '—'}
-          color="#6366f1" sub="FAQ score" />
+        <StatCard isDark={isDark} label="Total Questions" value={faqSummary.total} sub="all time" />
+        <StatCard isDark={isDark} label="FAQ Match Rate" value={`${matchRate}%`} color="#10b981" sub={`${faqSummary.matched} matched`} />
+        <StatCard isDark={isDark} label="Dead Queries" value={deadQueries.length} color={deadQueries.length > 3 ? '#ef4444' : '#f59e0b'} sub="no answer found" />
+        <StatCard isDark={isDark} label="Avg Similarity" value={avgScore !== null ? avgScore.toFixed(2) : '—'} color="#6366f1" sub="FAQ score" />
       </div>
 
       {/* ── Source Breakdown + Daily Chart ─────────────────────────── */}
@@ -259,7 +255,7 @@ const ChatbotConfig: React.FC = () => {
             <ResponsiveContainer width="100%" height={180}>
               <PieChart>
                 <Pie data={sourcePie} dataKey="value" nameKey="name" outerRadius={70}
-                  label={({ name, percent }) => `${name} ${Math.round(percent * 100)}%`}>
+                  label={({ name, percent }) => `${name} ${Math.round((percent ?? 0) * 100)}%`}>
                   {sourcePie.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
                 </Pie>
                 <Tooltip contentStyle={tipStyle} />

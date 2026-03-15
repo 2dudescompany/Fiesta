@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../lib/supabase";
 import { useAuth } from "../../contexts/AuthContext";
 import { useTimeTheme } from "../../hooks/useTimeTheme";
 import { ThemedCard } from "../common/ThemedCard";
 import FAQDocGenerator from "./FAQDocGenerator";
+import { Globe, RefreshCw, CheckCircle2, Trash2, AlertCircle } from 'lucide-react';
 
 const PAGE_SIZE = 5;
 
@@ -84,6 +85,15 @@ export default function Business() {
     support_email: "", support_phone: "", website_url: "", allowed_domains: "",
   });
 
+  // SmartScraper state
+  const [scrapeUrl, setScrapeUrl] = useState('');
+  const [crawlDepth, setCrawlDepth] = useState(1);
+  const [scraping, setScraping] = useState(false);
+  const [scrapeResult, setScrapeResult] = useState<{ pages: number; chunks: number } | null>(null);
+  const [scrapeError, setScrapeError] = useState('');
+  const [scrapedInfo, setScrapedInfo] = useState<{ count: number; lastAt: string } | null>(null);
+
+
   useEffect(() => { if (user) fetchBusiness(); }, [user]);
 
   const fetchBusiness = async () => {
@@ -100,8 +110,47 @@ export default function Business() {
         allowed_domains: (data.allowed_domains || []).join(", "),
       });
       fetchFaqs(data.id);
+      loadScrapedInfo(data.id);
     }
   };
+
+  const loadScrapedInfo = async (id: string) => {
+    const { data, count } = await supabase
+      .from('scraped_pages')
+      .select('scraped_at', { count: 'exact' })
+      .eq('business_id', id)
+      .order('scraped_at', { ascending: false })
+      .limit(1);
+    setScrapedInfo(count && count > 0 && data?.[0]
+      ? { count: count, lastAt: data[0].scraped_at } : null);
+  };
+
+  const handleScrape = async () => {
+    if (!scrapeUrl.trim() || !business?.id) return;
+    setScraping(true); setScrapeResult(null); setScrapeError('');
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/scrape-site`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+          body: JSON.stringify({ url: scrapeUrl.trim(), business_id: business.id, crawl_depth: crawlDepth }),
+        }
+      );
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || 'Scrape failed');
+      setScrapeResult({ pages: json.pages_crawled, chunks: json.chunks_stored });
+      await loadScrapedInfo(business.id);
+    } catch (err: any) { setScrapeError(err.message); }
+    finally { setScraping(false); }
+  };
+
+  const handleClearScrape = async () => {
+    if (!business?.id) return;
+    await supabase.from('scraped_pages').delete().eq('business_id', business.id);
+    setScrapedInfo(null); setScrapeResult(null);
+  };
+
 
   const fetchFaqs = async (businessId: string) => {
     const { data } = await supabase.from("business_faq").select("*").eq("business_id", businessId).order("created_at", { ascending: false });
@@ -359,6 +408,60 @@ export default function Business() {
             </>
           )}
         </ThemedCard>
+
+        {/* ── Smart Scraper ── */}
+        {business && (
+          <ThemedCard solid className="p-8">
+            <div className="mb-5">
+              <h2 className={`text-xl font-semibold flex items-center gap-2 ${isDark ? 'text-white' : 'text-gray-800'}`}>
+                <Globe className="w-5 h-5 text-indigo-500" /> Smart Scraper
+              </h2>
+              <p className={`mt-0.5 text-sm ${subCls}`}>Index your website so the chatbot can answer questions beyond your FAQs.</p>
+            </div>
+
+            {scrapedInfo && (
+              <div className={`flex items-center justify-between px-4 py-3 mb-4 rounded-xl border ${isDark ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                <div className="flex items-center gap-2 text-sm">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span><strong>{scrapedInfo.count}</strong> chunks indexed &middot; last scraped {new Date(scrapedInfo.lastAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+                <button onClick={handleClearScrape} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition">
+                  <Trash2 className="w-3 h-3" /> Clear
+                </button>
+              </div>
+            )}
+
+            <div className="flex gap-3 mb-3">
+              <input type="url" value={scrapeUrl} onChange={e => setScrapeUrl(e.target.value)}
+                placeholder={form.website_url || 'https://yourwebsite.com'}
+                className={glassInput + ' flex-1'} />
+              <select value={crawlDepth} onChange={e => setCrawlDepth(Number(e.target.value))}
+                className={glassInput + ' w-36 !flex-none'}>
+                <option value={0}>Home only</option>
+                <option value={1}>+1 level</option>
+                <option value={2}>+2 levels</option>
+              </select>
+            </div>
+
+            <button onClick={handleScrape} disabled={scraping || !scrapeUrl.trim()} className={btnLogin}>
+              {scraping
+                ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Scraping&hellip;</>
+                : <><RefreshCw className="w-4 h-4" /> Scrape Now</>}
+            </button>
+
+            {scrapeResult && (
+              <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border ${isDark ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-green-50 border-green-200 text-green-700'}`}>
+                <CheckCircle2 className="w-4 h-4" />
+                Done! Crawled <strong>{scrapeResult.pages}</strong> pages &rarr; stored <strong>{scrapeResult.chunks}</strong> chunks.
+              </div>
+            )}
+            {scrapeError && (
+              <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border ${isDark ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-red-50 border-red-200 text-red-600'}`}>
+                <AlertCircle className="w-4 h-4" /> {scrapeError}
+              </div>
+            )}
+          </ThemedCard>
+        )}
       </div>
 
       <Toast toast={toast} />

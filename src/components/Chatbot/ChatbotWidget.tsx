@@ -259,14 +259,27 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
               {/* Input bar */}
               <div style={{ borderTop: '1px solid #f0f2f8', background: 'white', padding: '9px 12px', flexShrink: 0 }}>
                 {listening && (
-                  <div style={{ marginBottom: 7, padding: '6px 12px', borderRadius: 10, background: grad, color: 'white', fontSize: 11, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <MicOff style={{ width: 13, height: 13 }} /> Listening… tap mic again to stop
+                  <div style={{ marginBottom: 7, padding: '8px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#ef444488,#dc262688)', color: 'white', fontSize: 11.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                      {[0,100,200].map(d => (
+                        <div key={d} style={{ width: 3, borderRadius: 2, background: 'white', animation: `waveBar 0.8s ${d}ms ease-in-out infinite` }} />
+                      ))}
+                    </div>
+                    Recording… tap mic to stop &amp; send
                   </div>
                 )}
                 <form onSubmit={e => { e.preventDefault(); sendMessage(inputValue); }} style={{ display: 'flex', gap: 7 }}>
                   <button type="button" onClick={listening ? stopRec : startRec}
                     aria-label={listening ? 'Stop' : 'Record'}
-                    style={{ padding: '9px 11px', borderRadius: 12, border: 'none', cursor: 'pointer', background: listening ? pc : '#f1f5f9', color: listening ? 'white' : '#64748b', flexShrink: 0, display: 'flex', alignItems: 'center' }}>
+                    style={{
+                      position: 'relative',
+                      padding: '9px 11px', borderRadius: 12, border: 'none', cursor: 'pointer',
+                      background: listening ? '#ef4444' : '#f1f5f9',
+                      color: listening ? 'white' : '#64748b',
+                      flexShrink: 0, display: 'flex', alignItems: 'center',
+                      boxShadow: listening ? '0 0 0 4px rgba(239,68,68,0.2)' : 'none',
+                      animation: listening ? 'micPulse 1.2s ease-in-out infinite' : 'none',
+                    }}>
                     {listening ? <MicOff style={{ width: 15, height: 15 }} /> : <Mic style={{ width: 15, height: 15 }} />}
                   </button>
                   <input ref={inputRef} type="text" value={inputValue}
@@ -291,6 +304,11 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
 
       <style>{`
         @keyframes hvbounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+        @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }
+        @keyframes waveBar {
+          0%,100% { height: 4px; }
+          50%      { height: 14px; }
+        }
       `}</style>
     </>
   );
