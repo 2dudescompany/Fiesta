@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Minimize2, Maximize2, ShoppingCart, Package, HelpCircle, Mic, MicOff, Bot } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 interface Message {
   id: string;
@@ -66,14 +67,12 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
     setIsTyping(true);
     await new Promise(r => setTimeout(r, 380));
     try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-        body: JSON.stringify({ question: text.trim(), chatbot_key: chatbotKey }),
+      // Use supabase.functions.invoke so the session JWT is auto-attached
+      // → edge function gets authenticated RLS context → can read businesses + FAQs
+      const { data, error: fnErr } = await supabase.functions.invoke('faq', {
+        body: { question: text.trim(), chatbot_key: chatbotKey },
       });
-      const raw = await res.text();
-      let data: any = {};
-      try { data = JSON.parse(raw); } catch { console.error('FAQ parse error:', raw); }
+      console.log('[FAQ]', { chatbot_key: chatbotKey, data, fnErr });
       setMessages(p => [...p, {
         id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(),
         source: data?.source,
@@ -99,13 +98,9 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         try {
           const form = new FormData();
           form.append('audio', blob, 'audio.webm');
-          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`, {
-            method: 'POST',
-            headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
-            body: form,
-          });
-          const d = await res.json();
-          if (d.transcript) await sendMessage(d.transcript);
+          const { data: tData, error: tErr } = await supabase.functions.invoke('transcribe', { body: form });
+          if (tErr) throw new Error(tErr.message);
+          if (tData?.transcript) await sendMessage(tData.transcript);
         } finally { setIsTyping(false); }
       };
       mr.start();

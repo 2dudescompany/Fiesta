@@ -81,9 +81,14 @@ serve(async (req) => {
     const dbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
                   Deno.env.get("SUPABASE_ANON_KEY") || "";
 
+    // Forward the caller's auth header so RLS sees the authenticated user context.
+    // supabase.functions.invoke sends the session JWT automatically.
+    const authHeader = req.headers.get("Authorization") || `Bearer ${dbKey}`;
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      dbKey
+      dbKey,
+      { global: { headers: { Authorization: authHeader } } }
     );
 
     /* ── Step 1: Find business ─────────────────────────────── */
