@@ -12,10 +12,10 @@ serve(async (req) => {
   }
 
   try {
-    const GROQ_KEY = Deno.env.get("GROQ_API_KEY");
+    const GROQ_KEY = Deno.env.get("GROK_API_KEY_FOR_STT") || Deno.env.get("GROQ_API_KEY");
     if (!GROQ_KEY) {
       return new Response(
-        JSON.stringify({ error: "GROQ_API_KEY not set" }),
+        JSON.stringify({ error: "No Groq API key found. Set GROK_API_KEY_FOR_STT as a Supabase secret." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }

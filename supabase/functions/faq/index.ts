@@ -76,9 +76,14 @@ serve(async (req) => {
       );
     }
 
+    // SUPABASE_SERVICE_ROLE_KEY = set manually via `supabase secrets set`
+    // SUPABASE_ANON_KEY         = auto-injected by Supabase runtime into every edge function
+    const dbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
+                  Deno.env.get("SUPABASE_ANON_KEY") || "";
+
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      dbKey
     );
 
     /* ── Step 1: Find business ─────────────────────────────── */

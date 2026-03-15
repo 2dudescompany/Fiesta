@@ -21,8 +21,12 @@ export default function Dashboard() {
   useDictationCapture();
 
   const { user, loading } = useAuth();
-  const [chatbotKey, setChatbotKey] = useState("");
-  const [businessName, setBusinessName] = useState("");
+  const [chatbotKey, setChatbotKey] = useState(
+    () => localStorage.getItem("havy_chatbot_key") || ""
+  );
+  const [businessName, setBusinessName] = useState(
+    () => localStorage.getItem("havy_business_name") || ""
+  );
 
   /* ---------- Shortcut UAT: inject tracker for dashboard owner ---------- */
   useEffect(() => {
@@ -38,8 +42,14 @@ export default function Dashboard() {
       .eq("user_id", user.id)
       .single()
       .then(({ data }) => {
-        if (data?.chatbot_key) setChatbotKey(data.chatbot_key);
-        if (data?.name) setBusinessName(data.name);
+        if (data?.chatbot_key) {
+          setChatbotKey(data.chatbot_key);
+          localStorage.setItem("havy_chatbot_key", data.chatbot_key);
+        }
+        if (data?.name) {
+          setBusinessName(data.name);
+          localStorage.setItem("havy_business_name", data.name);
+        }
       });
   }, [user]);
 

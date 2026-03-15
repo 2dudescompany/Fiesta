@@ -71,8 +71,9 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
         body: JSON.stringify({ question: text.trim(), chatbot_key: chatbotKey }),
       });
+      const raw = await res.text();
       let data: any = {};
-      try { data = JSON.parse(await res.text()); } catch { /**/ }
+      try { data = JSON.parse(raw); } catch { console.error('FAQ parse error:', raw); }
       setMessages(p => [...p, {
         id: (Date.now()+1).toString(), sender: 'bot', timestamp: new Date(),
         source: data?.source,
