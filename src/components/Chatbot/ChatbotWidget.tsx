@@ -36,10 +36,10 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
   const [isTyping, setIsTyping] = useState(false);
   const [listening, setListening] = useState(false);
 
-  const mediaRef  = useRef<MediaRecorder | null>(null);
+  const mediaRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
-  const msgEnd    = useRef<HTMLDivElement>(null);
-  const inputRef  = useRef<HTMLInputElement>(null);
+  const msgEnd = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { msgEnd.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
   useEffect(() => { if (isOpen && !isMinimized) inputRef.current?.focus(); }, [isOpen, isMinimized]);
@@ -66,7 +66,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
     setIsTyping(true);
     await new Promise(r => setTimeout(r, 380));
     try {
-      const res  = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`, {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
         body: JSON.stringify({ question: text.trim(), chatbot_key: chatbotKey }),
@@ -75,13 +75,13 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
       let data: any = {};
       try { data = JSON.parse(raw); } catch { console.error('FAQ parse error:', raw); }
       setMessages(p => [...p, {
-        id: (Date.now()+1).toString(), sender: 'bot', timestamp: new Date(),
+        id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(),
         source: data?.source,
         text: data?.answer ?? "Sorry, I couldn't find an answer. Please try rephrasing.",
         quickReplies: data?.answer ? undefined : ['Help', 'Browse Products'],
       }]);
     } catch {
-      setMessages(p => [...p, { id: (Date.now()+1).toString(), sender: 'bot', timestamp: new Date(), text: 'Something went wrong. Please try again.' }]);
+      setMessages(p => [...p, { id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(), text: 'Something went wrong. Please try again.' }]);
     } finally { setIsLoading(false); setIsTyping(false); }
   };
 
@@ -99,7 +99,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         try {
           const form = new FormData();
           form.append('audio', blob, 'audio.webm');
-          const res  = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`, {
+          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`, {
             method: 'POST',
             headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
             body: form,
@@ -261,7 +261,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
                 {listening && (
                   <div style={{ marginBottom: 7, padding: '8px 14px', borderRadius: 10, background: 'linear-gradient(135deg,#ef444488,#dc262688)', color: 'white', fontSize: 11.5, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
                     <div style={{ display: 'flex', gap: 3, alignItems: 'center' }}>
-                      {[0,100,200].map(d => (
+                      {[0, 100, 200].map(d => (
                         <div key={d} style={{ width: 3, borderRadius: 2, background: 'white', animation: `waveBar 0.8s ${d}ms ease-in-out infinite` }} />
                       ))}
                     </div>
@@ -304,7 +304,7 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
 
       <style>{`
         @keyframes hvbounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
-        @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,0.4)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }
+        @keyframes micPulse { 0%,100%{box-shadow:0 0 0 0 rgba(68, 173, 221, 0.79)} 50%{box-shadow:0 0 0 8px rgba(239,68,68,0)} }
         @keyframes waveBar {
           0%,100% { height: 4px; }
           50%      { height: 14px; }
