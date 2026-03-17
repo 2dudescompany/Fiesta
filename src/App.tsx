@@ -13,6 +13,7 @@ import PricingSelect from './pages/PricingSelect';
 import Dashboard from './pages/Dashboard';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Payment from './pages/Payment';
 
 import DictationToggle from './components/Dictation/DictationToggle';
 
@@ -82,6 +83,15 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <Dashboard />
+                    </ProtectedRoute>
+                  }
+                />
+
+                <Route
+                  path="/payment"
+                  element={
+                    <ProtectedRoute>
+                      <Payment />
                     </ProtectedRoute>
                   }
                 />

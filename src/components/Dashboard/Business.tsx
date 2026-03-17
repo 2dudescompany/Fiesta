@@ -419,35 +419,41 @@ export default function Business() {
               <p className={`mt-0.5 text-sm ${subCls}`}>Index your website so the chatbot can answer questions beyond your FAQs.</p>
             </div>
 
-            {scrapedInfo && (
-              <div className={`flex items-center justify-between px-4 py-3 mb-4 rounded-xl border ${isDark ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-green-50 border-green-200 text-green-700'}`}>
-                <div className="flex items-center gap-2 text-sm">
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span><strong>{scrapedInfo.count}</strong> chunks indexed &middot; last scraped {new Date(scrapedInfo.lastAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
-                </div>
-                <button onClick={handleClearScrape} className="flex items-center gap-1 text-xs text-red-500 hover:text-red-700 transition">
-                  <Trash2 className="w-3 h-3" /> Clear
-                </button>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-3">
+                <input type="url" value={scrapeUrl} onChange={e => setScrapeUrl(e.target.value)}
+                  placeholder={form.website_url || 'https://yourwebsite.com'}
+                  className={glassInput + ' flex-[4]'} />
+                <select value={crawlDepth} onChange={e => setCrawlDepth(Number(e.target.value))}
+                  className={glassInput + ' flex-1 min-w-[120px] max-w-[160px] !flex-none'}>
+                  <option value={0}>Home only</option>
+                  <option value={1}>+1 level</option>
+                  <option value={2}>+2 levels</option>
+                  <option value={3}>+3 levels</option>
+                  <option value={4}>+4 levels</option>
+                  <option value={5}>+5 levels</option>
+                </select>
               </div>
-            )}
 
-            <div className="flex gap-3 mb-3">
-              <input type="url" value={scrapeUrl} onChange={e => setScrapeUrl(e.target.value)}
-                placeholder={form.website_url || 'https://yourwebsite.com'}
-                className={glassInput + ' flex-1'} />
-              <select value={crawlDepth} onChange={e => setCrawlDepth(Number(e.target.value))}
-                className={glassInput + ' w-36 !flex-none'}>
-                <option value={0}>Home only</option>
-                <option value={1}>+1 level</option>
-                <option value={2}>+2 levels</option>
-              </select>
+              <div className="flex items-center gap-4">
+                <button onClick={handleScrape} disabled={scraping || !scrapeUrl.trim()} className={btnLogin + " w-auto px-6 text-sm"}>
+                  {scraping
+                    ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Scraping&hellip;</>
+                    : <><RefreshCw className="w-4 h-4" /> Start Indexing</>}
+                </button>
+                {scrapedInfo && (
+                  <div className="flex items-center gap-3 text-sm">
+                    <span className={isDark ? "text-green-400 font-medium flex items-center gap-1.5" : "text-green-600 font-medium flex items-center gap-1.5"}>
+                      <CheckCircle2 className="w-4 h-4" /> Active Index ({scrapedInfo.count} chunks)
+                    </span>
+                    <button onClick={handleClearScrape} className={`text-xs hover:underline flex items-center gap-1 ${isDark ? "text-red-400 hover:text-red-300" : "text-red-500 hover:text-red-600"}`}>
+                      <Trash2 className="w-3 h-3" /> Clear Index
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
 
-            <button onClick={handleScrape} disabled={scraping || !scrapeUrl.trim()} className={btnLogin}>
-              {scraping
-                ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Scraping&hellip;</>
-                : <><RefreshCw className="w-4 h-4" /> Scrape Now</>}
-            </button>
 
             {scrapeResult && (
               <div className={`mt-3 flex items-center gap-2 text-sm px-4 py-2.5 rounded-xl border ${isDark ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-green-50 border-green-200 text-green-700'}`}>

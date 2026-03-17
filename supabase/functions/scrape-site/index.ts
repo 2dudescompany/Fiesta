@@ -94,6 +94,38 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // ── Fetch user_id for credit deduction ─────────────────────────────
+    const { data: business } = await supabase
+      .from("businesses")
+      .select("user_id")
+      .eq("id", business_id)
+      .single();
+
+    if (!business) {
+        return new Response(JSON.stringify({ error: "business_not_found" }), {
+            status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" }
+        });
+    }
+
+    // ── Verify and Decrement FAQ Gen Credits (Scraper Check) ────────
+    const { data: creditOk, error: creditErr } = await supabase.rpc('decrement_credits', {
+      feature_name: 'faq_gen',
+      amount: 1, // 1 scrape run = 1 FAQ Gen credit
+      p_user_id: business.user_id
+    });
+
+    if (creditErr || !creditOk) {
+      if (creditErr && (creditErr.code === 'PGRST202' || creditErr.message?.includes('Could not find'))) {
+         console.warn("[scrape-site] Credit system not initialized. Bypassing.");
+      } else {
+         return new Response(JSON.stringify({ 
+           error: "You have reached your FAQ Generation / Smart Scraper limit for this billing period." 
+         }), {
+           status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+         });
+      }
+    }
+
     // ── Clear old scraped data for this business ─────────────────────
     await supabase.from("scraped_pages").delete().eq("business_id", business_id);
 

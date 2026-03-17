@@ -1,10 +1,10 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { MessageSquare, Mail, Volume2, Globe, ArrowRight, Star } from 'lucide-react';
-import { getTimeTheme } from "../../utils/timeTheme";
-
+import { MessageSquare, Mail, Volume2, Globe } from 'lucide-react';
+import { useTimeTheme } from "../../hooks/useTimeTheme";
+import CursorGlow from '../common/CursorGlow';
 
 const Hero: React.FC = () => {
+  const theme = useTimeTheme();
+  const isDark = theme === 'dark';
   const features = [
     {
       icon: MessageSquare,
@@ -29,36 +29,37 @@ const Hero: React.FC = () => {
   ];
 
   return (
-    <section className="gradient-bg py-20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section className={`relative overflow-hidden min-h-[95vh] flex flex-col justify-center py-20 transition-colors duration-500 ${isDark ? 'bg-gray-950' : 'gradient-bg'}`}>
+      <CursorGlow />
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
         <div className="text-center fade-in">
           <div className="flex justify-center items-center space-x-1 mb-4">
             <div className="flex">
             </div>
           </div>
-          
-          <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6">
-            <span className="shimmer-text">Sophistication</span> Your Website with
-            <span className="bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent"> AI Services</span>
+
+          <h1 className={`text-4xl md:text-6xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            <span className="shimmer-text">Sophisticate</span> Your Website with
+            <span className={isDark ? "bg-gradient-to-r from-blue-400 to-teal-400 bg-clip-text text-transparent" : "bg-gradient-to-r from-blue-600 to-teal-600 bg-clip-text text-transparent"}> AI Services</span>
           </h1>
-          
-          <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto">
+
+          <p className={`text-xl mb-12 max-w-3xl mx-auto ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
             Get a little helping hand for your commercial website with chatbot, on-cursor dictation
             and traffic tracking features
           </p>
-          
+
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-16 slide-up">
           {features.map((feature, index) => (
-            <div key={index} className="card text-center hover:scale-105 transition-transform duration-300">
-              <div className="flex justify-center mb-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <feature.icon className="w-6 h-6 text-yellow-600" />
+            <div key={index} className={`rounded-xl p-6 text-center hover:scale-105 transition-all duration-300 ${isDark ? 'bg-gray-900/50 border border-gray-800 hover:shadow-[0_0_15px_rgba(59,130,246,0.15)] shadow-lg' : 'bg-white shadow-lg hover:shadow-xl'}`}>
+              <div className="flex justify-center mb-5">
+                <div className={`w-14 h-14 rounded-2xl flex items-center justify-center transform transition-transform ${isDark ? 'bg-blue-900/40 text-blue-400' : 'bg-blue-50 text-blue-600'}`}>
+                  <feature.icon className={`w-7 h-7 ${isDark ? 'text-yellow-500' : 'text-yellow-600'}`} />
                 </div>
               </div>
-              <h3 className="text-lg font-semibold mb-2">{feature.title}</h3>
-              <p className="text-gray-600 text-sm">{feature.description}</p>
+              <h3 className={`text-lg font-bold mb-3 ${isDark ? 'text-gray-100' : 'text-gray-900'}`}>{feature.title}</h3>
+              <p className={`text-sm leading-relaxed ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>{feature.description}</p>
             </div>
           ))}
         </div>

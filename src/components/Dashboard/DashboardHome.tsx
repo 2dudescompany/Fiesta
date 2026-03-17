@@ -12,6 +12,27 @@ import {
 import { ThemedCard, ThemedStatCard } from "../common/ThemedCard";
 import { useTimeTheme } from "../../hooks/useTimeTheme";
 
+const CircularStat = ({ percentage, label, used, limit, color, isDark }: any) => {
+  const radius = 35;
+  const circumference = 2 * Math.PI * radius;
+  const p = isNaN(percentage) ? 0 : percentage;
+  const offset = circumference - (Math.min(100, p) / 100) * circumference;
+
+  return (
+    <div className={`flex flex-col items-center justify-center p-4 rounded-xl shadow-sm hover:shadow-md transition-shadow ${isDark ? "bg-white/5 border border-white/10" : "bg-white border border-gray-100"}`}>
+      <div className="relative flex items-center justify-center w-24 h-24 mb-3">
+        <svg className="absolute top-0 left-0 w-full h-full transform -rotate-90">
+          <circle cx="48" cy="48" r={radius} stroke="currentColor" strokeWidth="6" fill="transparent" className={isDark ? "text-gray-700" : "text-gray-100"} />
+          <circle cx="48" cy="48" r={radius} stroke={color} strokeWidth="6" fill="transparent" strokeDasharray={circumference} strokeDashoffset={offset} className="transition-all duration-1000 ease-out" strokeLinecap="round" />
+        </svg>
+        <span className={`text-sm font-bold ${isDark ? "text-gray-200" : "text-gray-700"}`}>{Math.round(p)}%</span>
+      </div>
+      <span className="text-[10px] font-bold text-gray-500 uppercase tracking-widest text-center px-1 leading-tight h-8 flex items-center">{label}</span>
+      <span className={`text-xs mt-1 font-medium px-2 py-0.5 rounded-md ${isDark ? "bg-gray-800 text-gray-400" : "bg-gray-100 text-gray-500"}`}>{used} / {limit}</span>
+    </div>
+  );
+};
+
 export default function DashboardHome() {
   const theme = useTimeTheme();
   const isDark = theme === "dark";
@@ -28,6 +49,7 @@ export default function DashboardHome() {
   const [weeklyData, setWeeklyData] = useState<any[]>([]);
   const [recentEvents, setRecentEvents] = useState<any[]>([]);
   const [sliderDays, setSliderDays] = useState(7);
+  const [userCredits, setUserCredits] = useState<any>(null);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -139,6 +161,28 @@ export default function DashboardHome() {
     setActiveUsers(uniqueUsers.size);
 
     /* -------------------------
+       USER CREDITS (Individual Features)
+    ------------------------- */
+    const { data: creditsData } = await supabase
+      .from("user_credits")
+      .select("*")
+      .eq("user_id", user.id)
+      .single();
+      
+    if (creditsData) {
+      setUserCredits(creditsData);
+    } else {
+      // Fallback defaults until they run the SQL plan
+      setUserCredits({
+        limit_chatbot: 1000, used_chatbot: 0,
+        limit_faq_gen: 50, used_faq_gen: 0,
+        limit_stt: 500, used_stt: 0,
+        limit_email: 500, used_email: 0,
+        limit_tts: 100, used_tts: 0
+      });
+    }
+
+    /* -------------------------
        WEEKLY SERVICE USAGE (rolling N-day window)
     ------------------------- */
     const today = new Date();
@@ -222,6 +266,17 @@ export default function DashboardHome() {
           <ThemedStatCard label="TTS Conversions" value={ttsConversions} />
           <ThemedStatCard label="Active Users" value={activeUsers} />
         </div>
+
+        {/* Credit Statistics */}
+        {userCredits && (
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <CircularStat isDark={isDark} label="Chatbot API" color="#3b82f6" used={userCredits.used_chatbot || 0} limit={userCredits.limit_chatbot || 1000} percentage={((userCredits.used_chatbot || 0) / (userCredits.limit_chatbot || 1000)) * 100} />
+            <CircularStat isDark={isDark} label="FAQ Gen" color="#8b5cf6" used={userCredits.used_faq_gen || 0} limit={userCredits.limit_faq_gen || 50} percentage={((userCredits.used_faq_gen || 0) / (userCredits.limit_faq_gen || 50)) * 100} />
+            <CircularStat isDark={isDark} label="Speech-to-Text" color="#10b981" used={userCredits.used_stt || 0} limit={userCredits.limit_stt || 500} percentage={((userCredits.used_stt || 0) / (userCredits.limit_stt || 500)) * 100} />
+            <CircularStat isDark={isDark} label="Text-to-Speech" color="#f59e0b" used={userCredits.used_tts || 0} limit={userCredits.limit_tts || 100} percentage={((userCredits.used_tts || 0) / (userCredits.limit_tts || 100)) * 100} />
+            <CircularStat isDark={isDark} label="Email Auto" color="#ef4444" used={userCredits.used_email || 0} limit={userCredits.limit_email || 500} percentage={((userCredits.used_email || 0) / (userCredits.limit_email || 500)) * 100} />
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-3 gap-6">
           {/* Weekly Usage */}

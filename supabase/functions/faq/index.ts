@@ -76,32 +76,48 @@ serve(async (req) => {
       );
     }
 
-    // SUPABASE_SERVICE_ROLE_KEY = set manually via `supabase secrets set`
-    // SUPABASE_ANON_KEY         = auto-injected by Supabase runtime into every edge function
-    const dbKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ||
-                  Deno.env.get("SUPABASE_ANON_KEY") || "";
-
-    // Forward the caller's auth header so RLS sees the authenticated user context.
-    // supabase.functions.invoke sends the session JWT automatically.
-    const authHeader = req.headers.get("Authorization") || `Bearer ${dbKey}`;
-
+    // SUPABASE_SERVICE_ROLE_KEY is auto-injected. Auth options are required in Deno
+    // (no localStorage) — without them Supabase-js v2 silently fails queries.
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
-      dbKey,
-      { global: { headers: { Authorization: authHeader } } }
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("SUPABASE_ANON_KEY")!,
+      { auth: { autoRefreshToken: false, persistSession: false } }
     );
+    console.log("[faq] key present:", !!Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"), "question:", question, "chatbot_key:", chatbot_key?.slice(0, 8));
 
     /* ── Step 1: Find business ─────────────────────────────── */
     const { data: business } = await supabase
       .from("businesses")
-      .select("id")
+      .select("id, user_id")
       .eq("chatbot_key", chatbot_key)
       .single();
 
+    console.log("[faq] business:", business?.id || "NOT FOUND");
     if (!business) {
-      return new Response(JSON.stringify({ answer: null }), {
+      return new Response(JSON.stringify({ answer: null, error: "business_not_found" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    }
+
+    /* ── Step 1.5: Verify and Decrement Chatbot Credits ────── */
+    const { data: creditOk, error: creditErr } = await supabase.rpc('decrement_credits', {
+      feature_name: 'chatbot',
+      amount: 1,
+      p_user_id: business.user_id
+    });
+
+    if (creditErr || !creditOk) {
+      if (creditErr && (creditErr.code === 'PGRST202' || creditErr.message?.includes('Could not find'))) {
+         console.warn("[faq] Credit system not yet initialized. Bypassing.");
+      } else {
+         console.log("[faq] Credit limit reached for business:", business.id);
+         return new Response(JSON.stringify({ 
+           answer: "I'm sorry, this business has exhausted its AI Chatbot limit for this billing period.", 
+           error: "credit_limit_reached" 
+         }), {
+           headers: { ...corsHeaders, "Content-Type": "application/json" },
+         });
+      }
     }
 
     /* ── Step 2: Load FAQs ─────────────────────────────────── */
@@ -124,27 +140,37 @@ serve(async (req) => {
       if (score > bestScore) { bestScore = score; bestMatch = faq; }
     }
 
-    const FAQ_THRESHOLD = 0.25;
+    console.log("[faq] faqs loaded:", faqs?.length || 0, "bestScore:", bestScore);
+    const FAQ_THRESHOLD = 0.15;
     const faqMatched = bestScore >= FAQ_THRESHOLD;
 
-    /* ── Log to faq_logs ───────────────────────────────────── */
-    await supabase.from("faq_logs").insert({
-      business_id: business.id,
-      question,
-      faq_question: bestMatch?.question || null,
-      answer: faqMatched ? bestMatch?.answer : null,
-      similarity_score: bestScore,
-      matched: faqMatched,
-    });
+    /* ── Log to faq_logs (non-fatal) ───────────────────────── */
+    try {
+      await supabase.from("faq_logs").insert({
+        business_id: business.id,
+        question,
+        faq_question: bestMatch?.question || null,
+        answer: faqMatched ? bestMatch?.answer : null,
+        similarity_score: bestScore,
+        matched: faqMatched,
+      });
+    } catch (logErr: any) {
+      console.error("[faq] faq_logs insert failed (non-fatal):", logErr.message);
+    }
 
     if (faqMatched) {
-      await supabase.from("faq_analytics").insert({
-        chatbot_key,
-        question,
-        matched_question: bestMatch.question,
-        score: bestScore,
-        created_at: new Date().toISOString(),
-      });
+      /* ── Log to faq_analytics (non-fatal) ─────────────────── */
+      try {
+        await supabase.from("faq_analytics").insert({
+          chatbot_key,
+          question,
+          matched_question: bestMatch.question,
+          score: bestScore,
+          created_at: new Date().toISOString(),
+        });
+      } catch (aErr: any) {
+        console.error("[faq] faq_analytics insert failed (non-fatal):", aErr.message);
+      }
 
       return new Response(
         JSON.stringify({

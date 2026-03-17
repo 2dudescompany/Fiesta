@@ -36,21 +36,25 @@ export default function Dashboard() {
   /* ---------- Load chatbot_key + business name from Supabase ---------- */
   useEffect(() => {
     if (!user) return;
-    supabase
-      .from("businesses")
-      .select("chatbot_key, name")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data?.chatbot_key) {
+    async function loadBusinessData() {
+      const { data, error } = await supabase
+        .from("businesses")
+        .select("chatbot_key, business_name")
+        .eq("user_id", user.id)
+        .single();
+        
+      if (data && !error) {
+        if (data.chatbot_key) {
           setChatbotKey(data.chatbot_key);
           localStorage.setItem("havy_chatbot_key", data.chatbot_key);
         }
-        if (data?.name) {
-          setBusinessName(data.name);
-          localStorage.setItem("havy_business_name", data.name);
+        if (data.business_name) {
+          setBusinessName(data.business_name);
+          localStorage.setItem("havy_business_name", data.business_name);
         }
-      });
+      }
+    }
+    loadBusinessData();
   }, [user]);
 
   /* ---------- Load saved widget config ---------- */
@@ -115,8 +119,8 @@ export default function Dashboard() {
         </Routes>
       </main>
 
-      {/* ---------- Chatbot Widget — renders as soon as user is known ---------- */}
-      {user && (
+      {/* ---------- Chatbot Widget — renders only when key is ready ---------- */}
+      {user && chatbotKey && (
         <ChatbotWidget
           chatbotKey={chatbotKey}
           businessName={businessName}

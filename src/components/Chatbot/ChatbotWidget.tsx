@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Minimize2, Maximize2, ShoppingCart, Package, HelpCircle, Mic, MicOff, Bot } from 'lucide-react';
-import { supabase } from '../../lib/supabase';
 
 interface Message {
   id: string;
@@ -67,20 +66,34 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
     setIsTyping(true);
     await new Promise(r => setTimeout(r, 380));
     try {
-      // Use supabase.functions.invoke so the session JWT is auto-attached
-      // → edge function gets authenticated RLS context → can read businesses + FAQs
-      const { data, error: fnErr } = await supabase.functions.invoke('faq', {
-        body: { question: text.trim(), chatbot_key: chatbotKey },
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/faq`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
+          Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ question: text.trim(), chatbot_key: chatbotKey }),
       });
-      console.log('[FAQ]', { chatbot_key: chatbotKey, data, fnErr });
+      const raw = await res.text();
+      let data: any = {};
+      try { data = JSON.parse(raw); } catch { console.error('[FAQ] parse error:', raw); }
+      console.log('[FAQ]', { chatbotKey: chatbotKey.slice(0,12)||'EMPTY', status: res.status, raw, data });
+      
+      if (!res.ok) {
+        setMessages(p => [...p, { id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(), text: `Error: ${data?.error || raw || 'Server Error'}` }]);
+        return;
+      }
+
       setMessages(p => [...p, {
         id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(),
         source: data?.source,
         text: data?.answer ?? "Sorry, I couldn't find an answer. Please try rephrasing.",
         quickReplies: data?.answer ? undefined : ['Help', 'Browse Products'],
       }]);
-    } catch {
-      setMessages(p => [...p, { id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(), text: 'Something went wrong. Please try again.' }]);
+    } catch (e: any) {
+      console.error("[FAQ] Network Error:", e);
+      setMessages(p => [...p, { id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(), text: `Network Error: ${e.message}` }]);
     } finally { setIsLoading(false); setIsTyping(false); }
   };
 
@@ -98,9 +111,14 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
         try {
           const form = new FormData();
           form.append('audio', blob, 'audio.webm');
-          const { data: tData, error: tErr } = await supabase.functions.invoke('transcribe', { body: form });
-          if (tErr) throw new Error(tErr.message);
-          if (tData?.transcript) await sendMessage(tData.transcript);
+          form.append('chatbot_key', chatbotKey);
+          const tr = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe`, {
+            method: 'POST',
+            headers: { apikey: import.meta.env.VITE_SUPABASE_ANON_KEY, Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}` },
+            body: form,
+          });
+          const td = await tr.json();
+          if (td.transcript) await sendMessage(td.transcript);
         } finally { setIsTyping(false); }
       };
       mr.start();

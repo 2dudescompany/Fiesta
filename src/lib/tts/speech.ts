@@ -2,6 +2,8 @@
 // 100% free, zero API keys, works offline.
 // The browser ships Hindi (hi-IN), Tamil (ta-IN), Telugu (te-IN), Marathi (mr-IN),
 // Bengali (bn-IN) voices natively in Chrome / Edge on all platforms.
+// Bengali (bn-IN) voices natively in Chrome / Edge on all platforms.
+import { supabase } from '../supabase';
 
 // Keep export for any lingering imports (empty — no HF models used)
 export const HF_MODELS: Record<string, string> = {};
@@ -126,7 +128,38 @@ function _speak(text: string, voice: SpeechSynthesisVoice | null): Promise<void>
     };
 
     setStatus("loading");
-    window.speechSynthesis.speak(utter);
+    
+    // Deduct TTS Credit before speaking (Client Side tracking since it uses browser web speech API)
+    supabase.auth.getUser().then(async ({ data }) => {
+       if (data.user) {
+          try {
+            const response: any = await supabase.rpc('decrement_credits', { 
+              feature_name: 'tts', 
+              amount: 1, 
+              p_user_id: data.user.id 
+            });
+            const ok = response?.data;
+            const error = response?.error;
+
+            // If RPC is missing (PGRST202 means function not found), bypass block to prevent breaking the app.
+            // If data is entirely null (user_credits row might not exist yet), bypass block temporarily.
+            if (ok || !response || (error && error.code === 'PGRST202') || (error && error.message?.includes('Could not find'))) {
+               window.speechSynthesis.speak(utter);
+            } else {
+               console.error("TTS Credit Check Error:", JSON.stringify(error));
+               setStatus("error", "Credit limit reached for Text-to-Speech");
+               resolve();
+            }
+          } catch (err) {
+            console.error("TTS Unhandled Exception", err);
+            window.speechSynthesis.speak(utter); 
+          }
+       } else {
+          // If no user (e.g public widget), speak anyway or check key. Assuming TTS is dashboard only mostly.
+          window.speechSynthesis.speak(utter);
+       }
+    });
+
   });
 }
 

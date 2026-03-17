@@ -3,16 +3,12 @@ import Hero from "../components/Home/Hero";
 import Pricing from "../components/Home/Pricing";
 import { useDictationCapture } from "../hooks/useDictationCapture";
 
-interface HomeProps {
-  mode: "light" | "dark";
-}
-
-const Home: React.FC<HomeProps> = ({ mode }) => {
+const Home: React.FC = () => {
   useDictationCapture();
 
   return (
     <>
-      <Hero mode={mode} />
+      <Hero />
       <Pricing />
     </>
   );
