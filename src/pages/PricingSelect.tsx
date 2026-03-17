@@ -10,7 +10,7 @@ const PricingSelect: React.FC = () => {
   const theme = useTimeTheme();
   const isDark = theme === 'dark';
   const navigate = useNavigate();
- 
+
   const plans = [
     {
       id: 'free',
@@ -81,8 +81,12 @@ const PricingSelect: React.FC = () => {
     }
   ];
 
-  const handlePlanSelect = (planId: string) => {
-    navigate(`/payment?plan=${planId}`);
+  const handlePlanSelect = (plan: { id: string; price: number }) => {
+    if (plan.id === 'free') {
+      navigate('/dashboard');
+      return;
+    }
+    navigate(`/payment?plan=${plan.id}&amount=${plan.price}`);
   };
 
   return (
@@ -101,11 +105,10 @@ const PricingSelect: React.FC = () => {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className={`relative rounded-2xl p-8 transition-colors duration-300 ${
-                plan.popular
+              className={`relative rounded-2xl p-8 transition-colors duration-300 ${plan.popular
                   ? `border-2 border-blue-500 shadow-2xl scale-105 ${isDark ? 'bg-gray-900 shadow-[0_0_20px_rgba(59,130,246,0.2)]' : 'bg-white'}`
                   : `border shadow-lg ${isDark ? 'bg-gray-900/50 border-gray-800' : 'bg-white border-gray-200'}`
-              }`}
+                }`}
             >
               {plan.popular && (
                 <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
@@ -134,15 +137,14 @@ const PricingSelect: React.FC = () => {
               </ul>
 
               <button
-                onClick={() => handlePlanSelect(plan.id)}
-                className={`w-full flex items-center justify-center space-x-2 py-3 px-6 rounded-lg font-semibold transition-colors duration-200 ${
-                  plan.popular
+                onClick={() => handlePlanSelect(plan)}
+                className={`w-full flex items-center justify-center space-x-2 py-3 px-6 rounded-lg font-semibold transition-colors duration-200 ${plan.popular
                     ? 'bg-blue-600 hover:bg-blue-700 text-white'
                     : isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-200' : 'bg-gray-100 hover:bg-gray-200 text-gray-800'
-                }`}
+                  }`}
               >
                 <CreditCard className="w-5 h-5" />
-                <span>Select Plan</span>
+                <span>{plan.id === 'free' ? 'Get Started' : 'Select Plan'}</span>
               </button>
             </div>
           ))}

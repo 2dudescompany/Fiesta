@@ -78,8 +78,8 @@ const ChatbotWidget: React.FC<ChatbotWidgetProps> = ({
       const raw = await res.text();
       let data: any = {};
       try { data = JSON.parse(raw); } catch { console.error('[FAQ] parse error:', raw); }
-      console.log('[FAQ]', { chatbotKey: chatbotKey.slice(0,12)||'EMPTY', status: res.status, raw, data });
-      
+      console.log('[FAQ]', { chatbotKey: chatbotKey.slice(0, 12) || 'EMPTY', status: res.status, raw, data });
+
       if (!res.ok) {
         setMessages(p => [...p, { id: (Date.now() + 1).toString(), sender: 'bot', timestamp: new Date(), text: `Error: ${data?.error || raw || 'Server Error'}` }]);
         return;
