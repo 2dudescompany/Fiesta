@@ -10,6 +10,15 @@ export default defineConfig(({ mode }) => {
   void env; // kept in case other env vars are needed
   return {
     plugins: [react()],
+    server: {
+      proxy: {
+        '/api': {
+          target: 'http://localhost:3000', // Or whatever port your backend is on
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api/, ''),
+        },
+      },
+    },
     optimizeDeps: {
       exclude: ['lucide-react'],
     },
