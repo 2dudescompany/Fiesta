@@ -97,7 +97,7 @@ const Header: React.FC = () => {
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
             <Bot className="w-8 h-8 text-indigo-400" />
-            <span className="text-xl font-bold text-white tracking-tight">HAVY AI Services</span>
+            <span className="text-xl font-bold text-white tracking-tight">HAVY AI Services </span>
           </Link>
 
           {/* Nav */}
